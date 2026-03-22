@@ -1,0 +1,82 @@
+services:
+  huntr-scraper:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.scraper
+    container_name: huntr-scraper
+    stop_grace_period: 5s
+    volumes:
+      - /mnt/nas/huntr-data:/data:rw
+    restart: unless-stopped
+    environment:
+      - SCRAPER_POLL_INTERVAL=1800
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "pgrep", "huntr-scraper"]  # TODO: replace with /health HTTP endpoint
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    mem_limit: 512m
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - huntr-network
+
+  huntr-processor:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.processor
+    container_name: huntr-processor
+    stop_grace_period: 5s
+    volumes:
+      - /mnt/nas/huntr-data:/data:rw
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=host.docker.internal:11434
+      - PROCESSOR_POLL_INTERVAL=60
+      - LOG_LEVEL=info
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "pgrep", "huntr-processor"]  # TODO: replace with /health HTTP endpoint
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    mem_limit: 512m
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - huntr-network
+
+  huntr-web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    container_name: huntr-web
+    stop_grace_period: 5s
+    ports:
+      - "5000:5000"
+    volumes:
+      - /mnt/nas/huntr-data:/data:rw
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - LOG_LEVEL=info
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    mem_limit: 512m
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - huntr-network
+
+networks:
+  huntr-network:
+    driver: bridge

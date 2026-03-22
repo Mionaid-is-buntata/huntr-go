@@ -1,0 +1,31 @@
+# Dockerfile for huntr-processor service (Go)
+# Multi-stage build, ARM64 compatible for Raspberry Pi 5
+
+FROM golang:1.25-alpine AS builder
+
+RUN apk add --no-cache git
+
+WORKDIR /build
+COPY src/go.mod src/go.sum ./
+RUN go mod download
+
+COPY src/ ./
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /huntr-processor ./cmd/processor
+
+# --- Runtime ---
+FROM alpine:3.21
+
+RUN apk add --no-cache ca-certificates curl && \
+    adduser -D -u 1000 huntr
+
+WORKDIR /app
+COPY --from=builder /huntr-processor /app/huntr-processor
+
+RUN mkdir -p /data && chown huntr:huntr /data
+
+USER huntr
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD pgrep huntr-processor || exit 1
+
+CMD ["/app/huntr-processor"]

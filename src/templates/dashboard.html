@@ -1,0 +1,3687 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Huntr</title>
+    <style>
+      /* Coffee/Cream Color Palette */
+      :root {
+        --espresso: #3e2723;
+        --coffee-brown: #6f4e37;
+        --dark-coffee: #5c3d2e;
+        --medium-coffee: #5d4037;
+        --light-coffee: #8d6e63;
+        --warm-cream: #f5f1eb;
+        --soft-cream: #fffbf7;
+        --light-cream: #faf8f5;
+        --border: #d4c4b0;
+        --caramel: #a67c52;
+        --success: #7d8471;
+        --warning: #d4a574;
+        --error: #a0522d;
+        --disabled: #c4b5a0;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background-color: var(--dark-coffee);
+        color: var(--espresso);
+        line-height: 1.6;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: var(--light-coffee);
+        border-radius: 8px;
+        padding: 20px 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: var(--soft-cream);
+        margin-bottom: 0;
+        font-size: 2em;
+      }
+
+      .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .metadata {
+        color: var(--light-coffee);
+        margin-bottom: 12px;
+        font-size: 0.9em;
+      }
+
+      .stats {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+      }
+
+      .stat-card {
+        background-color: var(--light-cream);
+        padding: 12px 16px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        flex: 1;
+        min-width: 120px;
+        max-width: 180px;
+      }
+
+      .stat-card-wide {
+        min-width: 160px;
+        max-width: 200px;
+      }
+
+      .stat-label {
+        color: var(--light-coffee);
+        font-size: 0.85em;
+        margin-bottom: 5px;
+      }
+
+      .stat-value {
+        color: var(--espresso);
+        font-size: 1.5em;
+        font-weight: bold;
+      }
+
+      /* View Toggle Buttons */
+      .view-btn {
+        padding: 6px 12px;
+        border: 2px solid var(--border);
+        background-color: var(--soft-cream);
+        color: var(--espresso);
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85em;
+        font-weight: 600;
+        transition: all 0.2s;
+        white-space: nowrap;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .view-btn:hover {
+        background-color: var(--light-cream);
+        border-color: var(--coffee-brown);
+      }
+
+      .view-btn-active {
+        background-color: var(--coffee-brown);
+        color: var(--soft-cream);
+        border-color: var(--dark-coffee);
+      }
+
+      .view-btn-small {
+        padding: 6px 12px;
+        font-size: 0.85em;
+      }
+
+      .jobs-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 0;
+      }
+
+      .jobs-table th {
+        background-color: var(--coffee-brown);
+        color: var(--soft-cream);
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid var(--dark-coffee);
+      }
+
+      .jobs-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        background-color: var(--soft-cream);
+      }
+
+      .jobs-table tr:hover {
+        background-color: var(--light-cream);
+      }
+
+      .job-row.top-job {
+        background-color: var(--light-cream);
+        border-left: 4px solid var(--coffee-brown);
+      }
+
+      .score {
+        font-weight: bold;
+        color: var(--coffee-brown);
+        font-size: 1.1em;
+      }
+
+      .score-high {
+        color: var(--success);
+      }
+
+      .score-medium {
+        color: var(--caramel);
+      }
+
+      .score-low {
+        color: var(--light-coffee);
+      }
+
+      .job-link {
+        color: var(--coffee-brown);
+        text-decoration: none;
+        font-weight: 500;
+      }
+
+      .job-link:hover {
+        color: var(--dark-coffee);
+        text-decoration: underline;
+      }
+
+      .score-breakdown {
+        font-size: 0.85em;
+        color: var(--light-coffee);
+        margin-top: 5px;
+      }
+
+      .score-breakdown-details {
+        display: none;
+        margin-top: 5px;
+        padding: 8px;
+        background-color: var(--warm-cream);
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+
+      .score-breakdown-details.show {
+        display: block;
+      }
+
+      .toggle-breakdown {
+        cursor: pointer;
+        color: var(--coffee-brown);
+        text-decoration: underline;
+        font-size: 0.85em;
+      }
+
+      .toggle-breakdown:hover {
+        color: var(--dark-coffee);
+      }
+
+      .controls {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 1.1em;
+        font-weight: 600;
+        transition: background-color 0.2s;
+        margin: 3px;
+      }
+
+      .btn-primary {
+        background-color: var(--coffee-brown);
+        color: var(--soft-cream);
+      }
+
+      .btn-primary:hover {
+        background-color: var(--dark-coffee);
+      }
+
+      .btn-secondary {
+        background-color: var(--caramel);
+        color: var(--soft-cream);
+      }
+
+      .btn-secondary:hover {
+        background-color: var(--dark-coffee);
+      }
+
+      /* Message Notifications */
+      .message {
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin: 10px 0;
+        font-size: 0.95em;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      .message-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .message-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .message-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .panel {
+        background-color: var(--light-cream);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      /* Source Group Accordion */
+      .source-group {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        margin-bottom: 10px;
+        background: var(--soft-cream);
+        overflow: hidden;
+      }
+
+      .source-group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 15px;
+        background: var(--coffee-brown);
+        color: var(--soft-cream);
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s;
+      }
+
+      .source-group-header:hover {
+        background: var(--medium-coffee);
+      }
+
+      .source-group-title {
+        font-weight: 600;
+        font-size: 0.95em;
+      }
+
+      .source-group-count {
+        font-size: 0.85em;
+        opacity: 0.8;
+      }
+
+      .source-group-toggle {
+        font-size: 0.8em;
+        transition: transform 0.2s;
+      }
+
+      .source-group.collapsed .source-group-toggle {
+        transform: rotate(-90deg);
+      }
+
+      /* Toggle switch for board enable/disable */
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+        margin-left: 10px;
+      }
+
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 24px;
+      }
+
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+
+      .toggle-switch input:checked + .toggle-slider {
+        background-color: var(--caramel);
+      }
+
+      .toggle-switch input:checked + .toggle-slider:before {
+        transform: translateX(26px);
+      }
+
+      .source-group-content {
+        padding: 10px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 8px;
+        max-height: 500px;
+        overflow-y: auto;
+        transition:
+          max-height 0.3s ease,
+          padding 0.3s ease;
+      }
+
+      .source-group.collapsed .source-group-content {
+        max-height: 0;
+        padding: 0 10px;
+        overflow: hidden;
+      }
+
+      .source-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: var(--light-cream);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+
+      .source-item input[type="checkbox"] {
+        margin: 0;
+      }
+
+      .source-item-name {
+        flex: 1;
+        color: var(--espresso);
+      }
+
+      .source-item-status {
+        font-size: 0.75em;
+        padding: 2px 6px;
+        border-radius: 3px;
+      }
+
+      .source-item-status.has-parser {
+        background: var(--success);
+        color: white;
+      }
+
+      .source-item-status.no-parser {
+        background: var(--warning);
+        color: var(--espresso);
+      }
+
+      .source-item-delete {
+        background: none;
+        border: none;
+        color: var(--error);
+        cursor: pointer;
+        font-size: 1.1em;
+        padding: 2px 6px;
+        border-radius: 3px;
+        transition: background-color 0.2s;
+      }
+
+      .source-item-delete:hover {
+        background: rgba(160, 82, 45, 0.1);
+      }
+
+      .source-item-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-end;
+      }
+
+      .panel h2 {
+        color: var(--espresso);
+        margin-bottom: 15px;
+        font-size: 1.3em;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-group label {
+        display: block;
+        color: var(--medium-coffee);
+        margin-bottom: 5px;
+        font-weight: 500;
+      }
+
+      .form-group input[type="file"],
+      .form-group input[type="text"],
+      .form-group input[type="number"],
+      .form-group select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background-color: var(--soft-cream);
+        color: var(--espresso);
+        font-size: 0.95em;
+      }
+
+      .form-group input[type="file"] {
+        padding: 5px;
+      }
+
+      .file-upload-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .file-upload-row input[type="file"] {
+        flex: 1;
+      }
+
+      .inline-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: flex-start;
+      }
+
+      .inline-row .form-group {
+        flex: 1;
+        min-width: 150px;
+        margin-bottom: 0;
+      }
+
+      .schedule-info-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: center;
+      }
+
+      .schedule-info-row p {
+        margin: 0;
+      }
+
+      .filters-panel {
+        margin-bottom: 20px;
+      }
+
+      .filters-panel h3 {
+        margin-bottom: 15px;
+        color: var(--espresso);
+      }
+
+      .jobs-table-container {
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+
+      .btn-small {
+        padding: 5px 10px;
+        font-size: 0.85em;
+      }
+
+      /* Modal Styles */
+      .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .modal-content {
+        background-color: var(--soft-cream);
+        border-radius: 8px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 20px;
+        background-color: var(--coffee-brown);
+        color: var(--soft-cream);
+        border-radius: 8px 8px 0 0;
+      }
+
+      .modal-header h2 {
+        margin: 0;
+        font-size: 1.2em;
+      }
+
+      .modal-close {
+        background: none;
+        border: none;
+        color: var(--soft-cream);
+        font-size: 1.5em;
+        cursor: pointer;
+        line-height: 1;
+      }
+
+      .modal-close:hover {
+        opacity: 0.7;
+      }
+
+      .modal-body {
+        padding: 20px;
+      }
+
+      .modal-body .detail-row {
+        margin-bottom: 12px;
+      }
+
+      .modal-body .detail-label {
+        font-weight: 600;
+        color: var(--coffee-brown);
+        margin-bottom: 4px;
+      }
+
+      .modal-body .detail-value {
+        color: var(--espresso);
+      }
+
+      .modal-footer {
+        padding: 15px 20px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-running {
+        background-color: var(--success);
+      }
+
+      .status-idle {
+        background-color: var(--warning);
+      }
+
+      .status-stale {
+        background-color: var(--error);
+      }
+
+      .status-unknown {
+        background-color: var(--disabled);
+      }
+
+      /* Status LED Indicators */
+      .status-led {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        transition: all 0.3s ease;
+      }
+
+      .status-led-active {
+        background-color: #4caf50;
+        box-shadow: 0 0 8px #4caf50, 0 0 12px #4caf50;
+        animation: pulse-led 2s infinite;
+      }
+
+      .status-led-inactive {
+        background-color: #999;
+        opacity: 0.5;
+      }
+
+      @keyframes pulse-led {
+        0%, 100% {
+          box-shadow: 0 0 8px #4caf50, 0 0 12px #4caf50;
+        }
+        50% {
+          box-shadow: 0 0 12px #4caf50, 0 0 20px #4caf50;
+        }
+      }
+
+      .service-status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .service-item {
+        padding: 10px;
+        background-color: var(--soft-cream);
+        border-radius: 4px;
+        border: 1px solid var(--border);
+      }
+
+      .service-name {
+        font-weight: 600;
+        color: var(--espresso);
+        margin-bottom: 5px;
+      }
+
+      .service-message {
+        font-size: 0.85em;
+        color: var(--light-coffee);
+      }
+
+      /* Log Viewer Styles */
+      .log-viewer {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        font-family: 'Courier New', Consolas, monospace;
+        font-size: 0.85em;
+        padding: 15px;
+        border-radius: 6px;
+        max-height: 500px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        line-height: 1.5;
+      }
+
+      .log-viewer::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      .log-viewer::-webkit-scrollbar-track {
+        background: #2d2d2d;
+        border-radius: 5px;
+      }
+
+      .log-viewer::-webkit-scrollbar-thumb {
+        background: var(--medium-coffee);
+        border-radius: 5px;
+      }
+
+      .log-viewer::-webkit-scrollbar-thumb:hover {
+        background: var(--light-coffee);
+      }
+
+      .log-line-info {
+        color: #4fc3f7;
+      }
+
+      .log-line-warning {
+        color: #ffb74d;
+      }
+
+      .log-line-error {
+        color: #ef5350;
+      }
+
+      .log-line-success {
+        color: #66bb6a;
+      }
+
+      .log-empty-state {
+        color: #888;
+        font-style: italic;
+        text-align: center;
+        padding: 30px;
+      }
+
+      .log-refresh-indicator {
+        font-size: 0.85em;
+        color: var(--light-coffee);
+      }
+
+      .log-refresh-indicator .refresh-status {
+        font-weight: 500;
+      }
+
+      .log-refresh-indicator.active #refresh-status-text {
+        color: #66bb6a;
+        font-weight: 600;
+      }
+
+      .log-refresh-indicator.paused #refresh-status-text {
+        color: #ffb74d;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        border-bottom: 2px solid var(--border);
+      }
+
+      .tab {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        cursor: pointer;
+        color: var(--warm-cream);
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+
+      .tab:hover {
+        color: var(--soft-cream);
+      }
+
+      .tab.active {
+        color: var(--soft-cream);
+        border-bottom-color: var(--caramel);
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .message {
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+      }
+
+      .message-success {
+        background-color: rgba(125, 132, 113, 0.2);
+        border-left: 4px solid var(--success);
+        color: var(--espresso);
+      }
+
+      .message-error {
+        background-color: rgba(160, 82, 45, 0.2);
+        border-left: 4px solid var(--error);
+        color: var(--espresso);
+      }
+
+      /* Loading indicators */
+      .loading {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--border);
+        border-top-color: var(--coffee-brown);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-left: 8px;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .loading-overlay {
+        position: relative;
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      /* Error banner */
+      .error-banner {
+        background-color: rgba(160, 82, 45, 0.15);
+        border-left: 4px solid var(--error);
+        padding: 12px 16px;
+        margin-bottom: 20px;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .error-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+      }
+
+      .error-banner button {
+        background: none;
+        border: none;
+        font-size: 1.5em;
+        color: var(--error);
+        cursor: pointer;
+        padding: 0;
+        margin-left: 15px;
+        line-height: 1;
+      }
+
+      .error-banner button:hover {
+        opacity: 0.7;
+      }
+
+      /* Empty state */
+      .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--light-coffee);
+      }
+
+      .empty-state-icon {
+        font-size: 3em;
+        margin-bottom: 15px;
+        opacity: 0.5;
+      }
+
+      .empty-state-message {
+        font-size: 1.1em;
+        margin-bottom: 10px;
+      }
+
+      .empty-state-hint {
+        font-size: 0.9em;
+        color: var(--light-coffee);
+      }
+
+      /* CV Profile Display */
+      .cv-profile {
+        margin-top: 15px;
+      }
+
+      .cv-profile h3 {
+        color: var(--espresso);
+        margin-top: 15px;
+        margin-bottom: 8px;
+        font-size: 1.1em;
+      }
+
+      .cv-profile ul {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 15px 0;
+      }
+
+      .cv-profile li {
+        padding: 5px 10px;
+        margin: 5px 0;
+        background-color: var(--warm-cream);
+        border-radius: 4px;
+        display: inline-block;
+        margin-right: 8px;
+        font-size: 0.9em;
+      }
+
+      .cv-profile p {
+        color: var(--medium-coffee);
+        line-height: 1.6;
+      }
+
+      /* CV Processing Progress Tracker */
+      .cv-progress-tracker {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: var(--warm-cream);
+        border-radius: 8px;
+        border: 1px solid var(--border);
+      }
+
+      .cv-progress-tracker.hidden {
+        display: none;
+      }
+
+      .cv-progress-title {
+        font-weight: 600;
+        color: var(--espresso);
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .cv-progress-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .cv-step {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px;
+        border-radius: 6px;
+        transition: background-color 0.3s;
+      }
+
+      .cv-step.pending {
+        color: var(--light-coffee);
+      }
+
+      .cv-step.active {
+        background-color: var(--light-cream);
+        color: var(--espresso);
+      }
+
+      .cv-step.complete {
+        color: var(--success);
+      }
+
+      .cv-step.error {
+        color: var(--error);
+        background-color: rgba(160, 82, 45, 0.1);
+      }
+
+      .cv-step-icon {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+
+      .cv-step.pending .cv-step-icon {
+        background-color: var(--border);
+        color: var(--light-coffee);
+      }
+
+      .cv-step.active .cv-step-icon {
+        background-color: var(--coffee-brown);
+        color: var(--soft-cream);
+        animation: pulse 1.5s infinite;
+      }
+
+      .cv-step.complete .cv-step-icon {
+        background-color: var(--success);
+        color: white;
+      }
+
+      .cv-step.error .cv-step-icon {
+        background-color: var(--error);
+        color: white;
+      }
+
+      .cv-step-label {
+        font-size: 0.95em;
+      }
+
+      .cv-step-detail {
+        font-size: 0.8em;
+        color: var(--light-coffee);
+        margin-left: auto;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 0.8;
+        }
+      }
+
+      .cv-progress-result {
+        margin-top: 15px;
+        padding: 15px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .cv-progress-result.success {
+        background-color: rgba(125, 132, 113, 0.15);
+        border: 1px solid var(--success);
+        color: var(--success);
+      }
+
+      .cv-progress-result.error {
+        background-color: rgba(160, 82, 45, 0.1);
+        border: 1px solid var(--error);
+        color: var(--error);
+      }
+
+      .cv-progress-result-icon {
+        font-size: 1.5em;
+      }
+
+      .cv-progress-result-text {
+        flex: 1;
+      }
+
+      .cv-progress-result-title {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+
+      .cv-progress-result-detail {
+        font-size: 0.9em;
+        opacity: 0.9;
+      }
+
+      /* Form validation */
+      .form-group input:invalid,
+      .form-group select:invalid {
+        border-color: var(--error);
+      }
+
+      .form-group input:valid:not(:placeholder-shown),
+      .form-group select:valid {
+        border-color: var(--success);
+      }
+
+      .field-error {
+        color: var(--error);
+        font-size: 0.85em;
+        margin-top: 5px;
+        display: none;
+      }
+
+      .field-error.show {
+        display: block;
+      }
+
+      /* Service status enhancements */
+      .service-timestamp {
+        font-size: 0.75em;
+        color: var(--light-coffee);
+        margin-top: 5px;
+      }
+
+      .service-item.refreshing {
+        opacity: 0.7;
+        animation: pulse 1s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.7;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      /* Collection active indicator */
+      .collection-active {
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: var(--success);
+        color: var(--soft-cream);
+        border-radius: 12px;
+        font-size: 0.75em;
+        font-weight: 600;
+        margin-left: 10px;
+      }
+
+      .collection-radio {
+        margin-right: 8px;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: 15px;
+        }
+
+        .jobs-table {
+          font-size: 0.9em;
+        }
+
+        .jobs-table th,
+        .jobs-table td {
+          padding: 8px;
+        }
+
+        .controls {
+          flex-direction: column;
+        }
+
+        .btn {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header-row">
+        <h1>Huntr</h1>
+        <div style="display: flex; gap: 15px; align-items: center;">
+          <!-- Status LEDs -->
+          <div style="display: flex; gap: 12px; align-items: center; padding: 8px 12px; background-color: var(--light-cream); border-radius: 6px; border: 1px solid var(--border);">
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <div id="scraper-led" class="status-led status-led-inactive" title="Scraper Status"></div>
+              <span style="font-size: 0.85em; color: var(--espresso);">Scraper</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+              <div id="processor-led" class="status-led status-led-inactive" title="Processor Status"></div>
+              <span style="font-size: 0.85em; color: var(--espresso);">Processor</span>
+            </div>
+          </div>
+          <button class="btn btn-secondary" id="manual-scrape-btn" onclick="triggerManualScrape()">
+            🔍 Manual Scrape
+          </button>
+          <button class="btn btn-secondary" id="clear-run-data-btn" onclick="clearRunData()">
+            🗑 Clear Run Data
+          </button>
+          <button class="btn btn-primary" onclick="refreshDashboard()">
+            Refresh
+          </button>
+        </div>
+      </div>
+      <div class="metadata">
+        Last updated: <span id="last-updated">{{.LastUpdated}}</span> | Total
+        jobs: {{.TotalJobs}} | Displaying top {{len .Jobs}}
+      </div>
+
+      <!-- Error Banner -->
+      <div id="error-banner" class="error-banner" style="display: none">
+        <div class="error-content">
+          <span id="error-message"></span>
+          <button onclick="dismissError()" aria-label="Dismiss error">×</button>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('jobs', event)">
+          📋 Jobs
+        </button>
+        <button class="tab" onclick="showTab('cv', event)">📄 Upload Document</button>
+        <button class="tab" onclick="showTab('status', event)">
+          ⚙️ Status
+        </button>
+        <button class="tab" onclick="showTab('settings', event)">
+          🔧 Sources
+        </button>
+      </div>
+
+      <!-- Jobs Tab -->
+      <div id="tab-jobs" class="tab-content active">
+
+        <div class="stats">
+          <div class="stat-card stat-card-wide">
+            <div class="stat-label">View</div>
+            <div style="display: flex; gap: 6px; margin-top: 8px; flex-wrap: nowrap;">
+              <button id="top-btn" class="view-btn view-btn-active" onclick="showTopJobs()" title="Show the cream - filtered best matches">
+                👑 Top
+              </button>
+              <button id="others-btn" class="view-btn" onclick="showOthersJobs()" title="Show all top 20 jobs">
+                ⤹ Others
+              </button>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Best Score</div>
+            <div class="stat-value">{{.TopScore}}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Lowest Score</div>
+            <div class="stat-value">{{.LowestScore}}</div>
+          </div>
+          <div class="stat-card" style="position: relative;">
+            <div class="stat-label">Total Vacancies</div>
+            <div class="stat-value">{{.TotalJobs}}</div>
+            <button id="all-btn" class="view-btn view-btn-small" onclick="cycleAllJobs()" style="margin-top: 8px; display: none;" title="Show all jobs beyond top 20">
+              🐴 All
+            </button>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Last Scrape</div>
+            <div class="stat-value" style="font-size: 0.7em;">{{.LastScrapeTime}}</div>
+          </div>
+        </div>
+
+        <div class="jobs-table-container">
+          <table class="jobs-table">
+            <thead>
+              <tr>
+                <th>Score</th>
+                <th>Title</th>
+                <th>Company</th>
+                <th>Location</th>
+                <th>Salary</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{if .Jobs}} {{range $i, $job := .Jobs}}
+              <tr
+                class="job-row {{if le (add $i 1) 5}}top-job{{end}}"
+                data-location="{{lower $job.Location}}"
+                data-salary="{{$job.SalaryNum}}"
+                data-worktype="{{if $job.WorkType}}{{lower $job.WorkType}}{{else}}unknown{{end}}"
+              >
+                <td>
+                  <span
+                    class="score {{if ge $job.Score 80.0}}score-high{{else if ge $job.Score 50.0}}score-medium{{else}}score-low{{end}}"
+                  >
+                    {{printf "%.0f" $job.Score}}
+                  </span>
+                  {{if $job.ScoreBreakdown}}
+                  <div class="score-breakdown">
+                    <span
+                      class="toggle-breakdown"
+                      onclick="toggleBreakdown({{$i}}, event)"
+                      >Show</span
+                    >
+                    <div
+                      id="breakdown-{{$i}}"
+                      class="score-breakdown-details"
+                    >
+                      <strong>Score Breakdown:</strong><br />
+                      Tech Stack: {{index $job.ScoreBreakdown "tech_stack_score"}} pts<br />
+                      Domain: {{index $job.ScoreBreakdown "domain_score"}} pts<br />
+                      Location: {{index $job.ScoreBreakdown "location_score"}} pts<br />
+                      Salary: {{index $job.ScoreBreakdown "salary_score"}} pts
+                    </div>
+                  </div>
+                  {{end}}
+                </td>
+                <td>
+                  <a href="{{$job.Link}}" target="_blank" class="job-link"
+                    >{{$job.Title}}</a
+                  >
+                </td>
+                <td>{{$job.Company}}</td>
+                <td>{{$job.Location}}</td>
+                <td>{{$job.Salary}}</td>
+                <td>
+                  <button
+                    class="btn btn-secondary btn-small"
+                    onclick="showJobDetails({{$i}})"
+                  >
+                    Details
+                  </button>
+                </td>
+              </tr>
+              {{end}} {{else}}
+              <tr>
+                <td colspan="6">
+                  <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <div class="empty-state-message">No jobs available</div>
+                    <div class="empty-state-hint">
+                      Jobs will appear here after the next aggregation cycle.
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Job Details Modal -->
+      <div id="job-modal" class="modal" style="display: none">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 id="modal-title">Job Details</h2>
+            <button class="modal-close" onclick="closeJobModal()">
+              &times;
+            </button>
+          </div>
+          <div class="modal-body" id="modal-body"></div>
+          <div class="modal-footer">
+            <a id="modal-link" href="#" target="_blank" class="btn btn-primary"
+              >View Full Listing</a
+            >
+            <button class="btn btn-secondary" onclick="closeJobModal()">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Tab -->
+      <div id="tab-cv" class="tab-content">
+        <div class="panel">
+          <h2>Upload</h2>
+          <form id="cv-upload-form" enctype="multipart/form-data">
+            <div class="form-group">
+              <label for="cv-file">Select CV File (DOCX format):</label>
+              <div class="file-upload-row">
+                <input
+                  type="file"
+                  id="cv-file"
+                  name="file"
+                  accept=".docx"
+                  required
+                />
+                <button type="submit" class="btn btn-primary">Upload</button>
+              </div>
+            </div>
+          </form>
+          <div id="cv-upload-message"></div>
+
+          <!-- CV Processing Progress Tracker -->
+          <div id="cv-progress-tracker" class="cv-progress-tracker hidden">
+            <div class="cv-progress-title">
+              <span class="loading"></span>
+              Processing Document...
+            </div>
+            <div class="cv-progress-steps">
+              <div id="step-upload" class="cv-step pending">
+                <div class="cv-step-icon">1</div>
+                <span class="cv-step-label">Uploading Document</span>
+                <span class="cv-step-detail"></span>
+              </div>
+              <div id="step-parse" class="cv-step pending">
+                <div class="cv-step-icon">2</div>
+                <span class="cv-step-label">Parsing document</span>
+                <span class="cv-step-detail"></span>
+              </div>
+              <div id="step-chunk" class="cv-step pending">
+                <div class="cv-step-icon">3</div>
+                <span class="cv-step-label">Chunking text</span>
+                <span class="cv-step-detail"></span>
+              </div>
+              <div id="step-embed" class="cv-step pending">
+                <div class="cv-step-icon">4</div>
+                <span class="cv-step-label">Generating embeddings</span>
+                <span class="cv-step-detail"></span>
+              </div>
+              <div id="step-chromadb" class="cv-step pending">
+                <div class="cv-step-icon">5</div>
+                <span class="cv-step-label">Creating ChromaDB collection</span>
+                <span class="cv-step-detail"></span>
+              </div>
+              <div id="step-profile" class="cv-step pending">
+                <div class="cv-step-icon">6</div>
+                <span class="cv-step-label"
+                  >Extracting profile with Ollama</span
+                >
+                <span class="cv-step-detail"></span>
+              </div>
+            </div>
+            <div
+              id="cv-progress-result"
+              class="cv-progress-result hidden"
+            ></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Document Processing Status</h2>
+          <div id="cv-status">
+            <p>
+              No Document uploaded yet. Upload a Document to begin processing.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>ChromaDB Collections</h2>
+          <div id="collections-list">
+            <p>Loading collections...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Service Status Tab -->
+      <div id="tab-status" class="tab-content">
+        <div class="panel">
+          <h2>Service Status</h2>
+          <button class="btn btn-secondary" onclick="refreshStatus()">
+            Refresh Status
+          </button>
+          <div id="service-status" class="service-status">
+            <p>Loading service status...</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Error History</h2>
+          <button class="btn btn-secondary" onclick="loadErrorHistory()">
+            Refresh Error History
+          </button>
+          <div id="error-history" style="margin-top: 15px;">
+            <p>Loading error history...</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2>Scraper Logs</h2>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span id="log-refresh-indicator" class="log-refresh-indicator">
+                <span class="refresh-status">Auto-refresh: <span id="refresh-status-text">checking...</span></span>
+                <span id="refresh-countdown" style="margin-left: 8px; font-size: 0.9em;"></span>
+              </span>
+              <button class="btn btn-secondary" onclick="loadScraperLogs()">
+                Manual Refresh
+              </button>
+            </div>
+          </div>
+          <div id="scraper-logs-container" class="log-viewer">
+            <p style="color: #888;">Loading logs...</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2>Processor Logs</h2>
+            <button class="btn btn-secondary" onclick="loadProcessorLogs()">
+              Manual Refresh
+            </button>
+          </div>
+          <p style="color: #888; font-size: 0.9em; margin-bottom: 10px;">Normalisation and scoring pipeline. If Top jobs are empty, check here for "0 jobs", "Normalisation resulted in 0 jobs", or errors.</p>
+          <div id="processor-logs-container" class="log-viewer">
+            <p style="color: #888;">Loading logs...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Tab -->
+      <div id="tab-settings" class="tab-content">
+        <!-- Display Filters Panel (also used as Scraper Filters when saved) -->
+        <div class="panel filters-panel">
+          <h3>Display & Scraper Filters</h3>
+          <p class="filter-hint" style="margin-bottom: 15px; color: #666;">
+            These filters control which jobs are shown in the Jobs tab. Use "Save for Scraper" to apply them during scraping (reduces scrape time).
+          </p>
+          <div class="inline-row">
+            <div class="form-group">
+              <label for="filter-location">Locale:</label>
+              <select id="filter-location" onchange="applyFilters()">
+                <option value="" selected>All Locations</option>
+                <option value="uk">UK Only</option>
+                <option value="europe">Europe</option>
+                <option value="uk,europe">UK & Europe</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="filter-worktype">Role Type:</label>
+              <select id="filter-worktype" onchange="applyFilters()">
+                <option value="" selected>All Types</option>
+                <option value="remote">100% Remote</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="remote,hybrid">Remote & Hybrid</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="filter-salary">Minimum Salary:</label>
+              <select id="filter-salary" onchange="applyFilters()">
+                <option value="0" selected>All Salaries</option>
+                <option value="-50000">Up to £50,000</option>
+                <option value="50000">£50,000+</option>
+                <option value="75000">£75,000+</option>
+                <option value="100000">£100,000+</option>
+                <option value="125000">£125,000+</option>
+              </select>
+            </div>
+            <div
+              class="form-group"
+              style="display: flex; align-items: flex-end; gap: 8px;"
+            >
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="clearFilters()"
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                onclick="saveScraperFilters()"
+              >
+                Save for Scraper
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Sources</h2>
+          <div id="sources-list">
+            <p>Loading sources...</p>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Add New Source</h2>
+          <form id="add-source-form">
+            <div class="form-group">
+              <label for="source-name">Source Name:</label>
+              <input
+                type="text"
+                id="source-name"
+                name="name"
+                required
+                placeholder="e.g., LinkedIn"
+              />
+            </div>
+            <div class="form-group">
+              <label for="source-url">Source URL:</label>
+              <input
+                type="text"
+                id="source-url"
+                name="url"
+                required
+                placeholder="https://..."
+              />
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="source-dynamic" name="dynamic" />
+                Requires JavaScript (Dynamic Content)
+              </label>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 15px">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="testSource(event)"
+              >
+                🧪 Test Source Before Adding
+              </button>
+              <button type="submit" class="btn btn-primary">Add Source</button>
+            </div>
+          </form>
+          <div id="source-message"></div>
+          <div id="test-results" style="margin-top: 15px"></div>
+        </div>
+
+        <div class="panel">
+          <h2>Scheduling</h2>
+          <div id="schedule-info">
+            <p>Loading schedule information...</p>
+          </div>
+
+          <h3 style="margin-top: 20px; margin-bottom: 15px">
+            Configure Schedule
+          </h3>
+          <form id="schedule-form">
+            <div class="form-group">
+              <label for="schedule-enabled">
+                <input type="checkbox" id="schedule-enabled" name="enabled" />
+                Enable Scheduled Scraping
+              </label>
+            </div>
+            <div class="inline-row">
+              <div class="form-group">
+                <label for="schedule-frequency">Frequency:</label>
+                <select
+                  id="schedule-frequency"
+                  name="frequency"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                  "
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly" selected>Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="schedule-time">Time (24hr format):</label>
+                <input
+                  type="time"
+                  id="schedule-time"
+                  name="time"
+                  value="09:00"
+                  style="
+                    width: 100%;
+                    padding: 8px;
+                    border: 1px solid var(--border);
+                    border-radius: 4px;
+                  "
+                />
+              </div>
+            </div>
+            <div class="form-group" id="days-group">
+              <label>Days (for weekly schedule):</label>
+              <div
+                style="
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 10px;
+                  margin-top: 5px;
+                "
+              >
+                <label
+                  ><input type="checkbox" name="days" value="Monday" checked />
+                  Mon</label
+                >
+                <label
+                  ><input type="checkbox" name="days" value="Tuesday" />
+                  Tue</label
+                >
+                <label
+                  ><input type="checkbox" name="days" value="Wednesday" />
+                  Wed</label
+                >
+                <label
+                  ><input type="checkbox" name="days" value="Thursday" />
+                  Thu</label
+                >
+                <label
+                  ><input type="checkbox" name="days" value="Friday" />
+                  Fri</label
+                >
+                <label
+                  ><input type="checkbox" name="days" value="Saturday" />
+                  Sat</label
+                >
+                <label
+                  ><input type="checkbox" name="days" value="Sunday" />
+                  Sun</label
+                >
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Schedule</button>
+          </form>
+          <div id="schedule-message" style="margin-top: 10px"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Source group definitions (must be before loadSources)
+      const SOURCE_GROUPS = {
+        'general-job-boards': { name: 'General Job Boards', order: 1 },
+        'uk-remote-boards': { name: 'UK Remote & Flexible Work Boards', order: 2 },
+        'tech-specialist-agencies': { name: 'Tech-Specialist Recruitment Agencies', order: 3 },
+        'tech-platforms': { name: 'Broad & Vertical Job Platforms', order: 4 },
+        'developer-first': { name: 'Developer-First / Recruiter-Led Platforms', order: 5 },
+        'uk-tech-agencies': { name: 'UK Tech Recruitment Agencies (Senior-Focused)', order: 6 },
+        'general': { name: 'General', order: 99 }
+      };
+
+      // Store job data for modal and filtering
+      const jobsData = {{jobsJSON .Jobs}};
+
+      // Filter jobs based on selected criteria (only applies in 'top' view)
+      function applyFilters() {
+        // Only apply filters in 'top' view
+        if (typeof currentView !== 'undefined' && currentView !== 'top') {
+          return;
+        }
+
+        const locationFilter = document.getElementById("filter-location")?.value || "";
+        const workTypeFilter = document.getElementById("filter-worktype")?.value || "";
+        const salaryFilter = parseInt(document.getElementById("filter-salary")?.value || 0);
+
+        const rows = document.querySelectorAll(".job-row");
+        let visibleCount = 0;
+
+        rows.forEach((row, index) => {
+          // Only filter within top 20 jobs when in Top view
+          if (index >= 20) {
+            row.style.display = "none";
+            return;
+          }
+
+          const rowLocation = row.dataset.location || "";
+          const rowSalary = parseInt(row.dataset.salary) || 0;
+          const rowWorkType = row.dataset.worktype || "";
+
+          let show = true;
+
+          // Location filter
+          if (locationFilter) {
+            const locations = locationFilter.split(",");
+            const locationMatch = locations.some(loc => {
+              if (loc === "uk") {
+                return rowLocation.includes("uk") || rowLocation.includes("united kingdom") ||
+                       rowLocation.includes("london") || rowLocation.includes("manchester") ||
+                       rowLocation.includes("birmingham") || rowLocation.includes("leeds") ||
+                       rowLocation.includes("glasgow") || rowLocation.includes("edinburgh");
+              }
+              if (loc === "europe") {
+                return rowLocation.includes("europe") || rowLocation.includes("germany") ||
+                       rowLocation.includes("france") || rowLocation.includes("netherlands") ||
+                       rowLocation.includes("spain") || rowLocation.includes("ireland");
+              }
+              return rowLocation.includes(loc);
+            });
+            if (!locationMatch) show = false;
+          }
+
+          // Work type filter
+          if (workTypeFilter && show) {
+            const workTypes = workTypeFilter.split(",");
+            const workMatch = workTypes.some(type => {
+              if (type === "remote") {
+                return rowWorkType.includes("remote") || rowLocation.includes("remote");
+              }
+              if (type === "hybrid") {
+                return rowWorkType.includes("hybrid") || rowLocation.includes("hybrid");
+              }
+              return rowWorkType.includes(type);
+            });
+            if (!workMatch) show = false;
+          }
+
+          // Salary filter
+          if (salaryFilter !== 0 && show) {
+            if (salaryFilter < 0) {
+              // Negative value means "up to" (e.g., -50000 = up to £50,000)
+              const maxSalary = Math.abs(salaryFilter);
+              if (rowSalary > maxSalary) show = false;
+            } else {
+              // Positive value means minimum salary
+              if (rowSalary < salaryFilter) show = false;
+            }
+          }
+
+          row.style.display = show ? "" : "none";
+          if (show) visibleCount++;
+        });
+
+        // Update displayed count
+        const displayedCount = document.getElementById("displayed-count");
+        if (displayedCount) {
+          displayedCount.textContent = visibleCount;
+        }
+      }
+
+      // Reset filters to defaults
+      function clearFilters() {
+        document.getElementById("filter-location").value = "uk,europe";
+        document.getElementById("filter-worktype").value = "remote,hybrid";
+        document.getElementById("filter-salary").value = "100000";
+        applyFilters();
+      }
+
+      // View state management
+      let currentView = 'top'; // 'top', 'others', or 'all'
+      let allPageIndex = 0; // For cycling through "All" jobs
+
+      // Show Top jobs (filtered cream)
+      function showTopJobs() {
+        currentView = 'top';
+        allPageIndex = 0;
+
+        // Update button states
+        document.getElementById('top-btn').classList.add('view-btn-active');
+        document.getElementById('others-btn').classList.remove('view-btn-active');
+        document.getElementById('all-btn').style.display = 'none';
+
+        // Apply filters to show only cream
+        applyFilters();
+        console.log('[UI] Showing Top (cream) jobs');
+      }
+
+      // Show Others (all top 20, no filters)
+      function showOthersJobs() {
+        currentView = 'others';
+        allPageIndex = 0;
+
+        // Update button states
+        document.getElementById('top-btn').classList.remove('view-btn-active');
+        document.getElementById('others-btn').classList.add('view-btn-active');
+        document.getElementById('all-btn').style.display = jobsData.length > 20 ? 'block' : 'none';
+
+        // Show all rows up to 20
+        const rows = document.querySelectorAll('.job-row');
+        rows.forEach((row, index) => {
+          row.style.display = index < 20 ? '' : 'none';
+        });
+
+        console.log('[UI] Showing Others (top 20 unfiltered)');
+      }
+
+      // Cycle through All jobs (beyond position 20)
+      function cycleAllJobs() {
+        const rows = Array.from(document.querySelectorAll('.job-row'));
+        const totalJobs = jobsData.length;
+
+        if (totalJobs <= 20) {
+          console.log('[UI] No jobs beyond position 20');
+          return;
+        }
+
+        // Calculate the next page
+        allPageIndex++;
+        const startIndex = 20 + (allPageIndex * 20);
+        const endIndex = Math.min(startIndex + 20, totalJobs);
+
+        // If we've shown all pages, return to Top view
+        if (startIndex >= totalJobs) {
+          allPageIndex = 0;
+          showTopJobs();
+          console.log('[UI] Cycled back to Top view');
+          return;
+        }
+
+        // Hide all rows, then show the current page
+        rows.forEach((row, index) => {
+          row.style.display = (index >= startIndex && index < endIndex) ? '' : 'none';
+        });
+
+        // Update button label to show range
+        const allBtn = document.getElementById('all-btn');
+        allBtn.textContent = `🐴 ${startIndex + 1}-${endIndex}`;
+
+        console.log(`[UI] Showing jobs ${startIndex + 1} to ${endIndex}`);
+      }
+
+      // Helper function to escape HTML
+      function escapeHtml(text) {
+        if (!text) return "";
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Show job details modal
+      function showJobDetails(index) {
+        const job = jobsData[index];
+        if (!job) {
+          console.error(`[UI] No job found at index ${index}`);
+          return;
+        }
+
+        const modal = document.getElementById("job-modal");
+        const title = document.getElementById("modal-title");
+        const body = document.getElementById("modal-body");
+        const link = document.getElementById("modal-link");
+
+        title.textContent = job.title;
+        link.href = job.link;
+
+        body.innerHTML = `
+          <div class="detail-row">
+            <div class="detail-label">Company</div>
+            <div class="detail-value">${escapeHtml(job.company) || "Not specified"}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Location</div>
+            <div class="detail-value">${escapeHtml(job.location) || "Not specified"}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Work Type</div>
+            <div class="detail-value">${escapeHtml(job.work_type) || "Not specified"}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Salary</div>
+            <div class="detail-value">${escapeHtml(job.salary) || "Not specified"}</div>
+          </div>
+          <div class="detail-row">
+            <div class="detail-label">Score</div>
+            <div class="detail-value">${job.score} points</div>
+          </div>
+          ${job.source ? `
+          <div class="detail-row">
+            <div class="detail-label">Source</div>
+            <div class="detail-value">${escapeHtml(job.source)}</div>
+          </div>
+          ` : ""}
+          ${job.skills ? `
+          <div class="detail-row">
+            <div class="detail-label">Skills Required</div>
+            <div class="detail-value">${escapeHtml(job.skills)}</div>
+          </div>
+          ` : ""}
+          ${job.description ? `
+          <div class="detail-row">
+            <div class="detail-label">Description</div>
+            <div class="detail-value" style="max-height: 200px; overflow-y: auto; white-space: pre-wrap;">${escapeHtml(job.description)}</div>
+          </div>
+          ` : ""}
+          ${job.responsibilities ? `
+          <div class="detail-row">
+            <div class="detail-label">Responsibilities</div>
+            <div class="detail-value" style="white-space: pre-wrap;">${escapeHtml(job.responsibilities)}</div>
+          </div>
+          ` : ""}
+          ${job.benefits ? `
+          <div class="detail-row">
+            <div class="detail-label">Benefits</div>
+            <div class="detail-value" style="white-space: pre-wrap;">${escapeHtml(job.benefits)}</div>
+          </div>
+          ` : ""}
+          ${job.score_breakdown && Object.keys(job.score_breakdown).length > 0 ? `
+          <div class="detail-row">
+            <div class="detail-label">Score Breakdown</div>
+            <div class="detail-value">
+              Tech Stack: ${job.score_breakdown.tech_stack_score || 0} pts<br>
+              Domain: ${job.score_breakdown.domain_score || 0} pts<br>
+              Location: ${job.score_breakdown.location_score || 0} pts<br>
+              Salary: ${job.score_breakdown.salary_score || 0} pts
+            </div>
+          </div>
+          ` : ""}
+        `;
+
+        modal.style.display = "flex";
+        console.log(`[UI] Showing job details for: ${job.title}`);
+      }
+
+      // Close job details modal
+      function closeJobModal() {
+        const modal = document.getElementById("job-modal");
+        modal.style.display = "none";
+      }
+
+      // Close modal when clicking outside
+      document.addEventListener("click", function(event) {
+        const modal = document.getElementById("job-modal");
+        if (event.target === modal) {
+          closeJobModal();
+        }
+      });
+
+      // Close modal with Escape key
+      document.addEventListener("keydown", function(event) {
+        if (event.key === "Escape") {
+          closeJobModal();
+        }
+      });
+
+      // Tab management
+      function showTab(tabName, event) {
+        console.log("[UI] Switching to tab:", tabName);
+
+        // Update tab buttons
+        document.querySelectorAll(".tab").forEach((btn) => {
+          btn.classList.remove("active");
+        });
+
+        if (event && event.target) {
+          event.target.classList.add("active");
+        } else {
+          // Fallback: find button by matching tab name in onclick attribute or text
+          document.querySelectorAll(".tab").forEach((btn) => {
+            const onclickAttr = btn.getAttribute("onclick") || "";
+            if (onclickAttr.includes(`'${tabName}'`) || onclickAttr.includes(`"${tabName}"`)) {
+              btn.classList.add("active");
+            }
+          });
+        }
+
+        // Update tab content
+        document.querySelectorAll(".tab-content").forEach((tab) => {
+          tab.classList.remove("active");
+        });
+        const targetTab = document.getElementById("tab-" + tabName);
+        if (targetTab) {
+          targetTab.classList.add("active");
+        } else {
+          console.error("[UI] Tab not found:", tabName);
+        }
+
+        // Refresh Error History and logs when Status tab is shown
+        if (tabName === "status") {
+          loadErrorHistory();
+          loadScraperLogs();
+          loadProcessorLogs();
+        }
+        // Refresh sources and scraper filters when Sources tab is shown
+        if (tabName === "settings") {
+          loadSources();
+          loadScraperFilters();
+        }
+        // Refresh collections when Upload Document tab is shown
+        if (tabName === "cv") {
+          console.log("[UI] CV tab shown, reloading collections...");
+          loadCollections();
+        }
+      }
+
+      // Refresh dashboard
+      function refreshDashboard() {
+        location.reload();
+      }
+
+      // Retry helper for API calls
+      async function fetchWithRetry(url, options = {}, maxRetries = 3) {
+        for (let i = 0; i < maxRetries; i++) {
+          try {
+            const response = await fetch(url, options);
+            if (response.ok || i === maxRetries - 1) {
+              return response;
+            }
+            console.warn(`[UI] Request failed, retrying (${i + 1}/${maxRetries})...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+          } catch (error) {
+            if (i === maxRetries - 1) {
+              throw error;
+            }
+            console.warn(`[UI] Request error, retrying (${i + 1}/${maxRetries})...`);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+          }
+        }
+      }
+
+      // Error banner management
+      function showErrorBanner(message) {
+        const banner = document.getElementById("error-banner");
+        const messageSpan = document.getElementById("error-message");
+        if (banner && messageSpan) {
+          messageSpan.textContent = message;
+          banner.style.display = "block";
+        }
+      }
+
+      function dismissError() {
+        const banner = document.getElementById("error-banner");
+        if (banner) {
+          banner.style.display = "none";
+        }
+      }
+
+      // Loading indicator helpers
+      function showLoading(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.classList.add("loading-overlay");
+          const loading = document.createElement("span");
+          loading.className = "loading";
+          loading.id = "loading-" + elementId;
+          element.appendChild(loading);
+        }
+      }
+
+      function hideLoading(elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.classList.remove("loading-overlay");
+          const loading = document.getElementById("loading-" + elementId);
+          if (loading) {
+            loading.remove();
+          }
+        }
+      }
+
+      function setButtonLoading(buttonId, isLoading) {
+        const button = document.getElementById(buttonId);
+        if (button) {
+          button.disabled = isLoading;
+          if (isLoading) {
+            button.innerHTML = button.innerHTML + '<span class="loading"></span>';
+          }
+        }
+      }
+
+      // CV Progress Tracker Helper Functions
+      function showProgressTracker() {
+        const tracker = document.getElementById("cv-progress-tracker");
+        tracker.classList.remove("hidden");
+        // Reset all steps to pending
+        document.querySelectorAll(".cv-step").forEach(step => {
+          step.className = "cv-step pending";
+          step.querySelector(".cv-step-icon").textContent = step.querySelector(".cv-step-icon").textContent.replace(/[^\d]/g, '') || step.querySelector(".cv-step-icon").textContent;
+          step.querySelector(".cv-step-detail").textContent = "";
+        });
+        // Hide result area
+        const result = document.getElementById("cv-progress-result");
+        result.classList.add("hidden");
+        result.innerHTML = "";
+      }
+
+      function hideProgressTracker() {
+        const tracker = document.getElementById("cv-progress-tracker");
+        tracker.classList.add("hidden");
+      }
+
+      function updateProgressStep(stepId, status, detail = "") {
+        const step = document.getElementById(stepId);
+        if (!step) return;
+
+        step.className = `cv-step ${status}`;
+        const icon = step.querySelector(".cv-step-icon");
+        const detailSpan = step.querySelector(".cv-step-detail");
+
+        if (status === "complete") {
+          icon.innerHTML = "&#10003;";
+        } else if (status === "error") {
+          icon.innerHTML = "&#10007;";
+        } else if (status === "active") {
+          icon.innerHTML = icon.textContent.replace(/[^\d]/g, '') || icon.textContent;
+        }
+
+        if (detail) {
+          detailSpan.textContent = detail;
+        }
+      }
+
+      function showProgressResult(success, title, detail) {
+        const result = document.getElementById("cv-progress-result");
+        result.classList.remove("hidden");
+        result.className = `cv-progress-result ${success ? "success" : "error"}`;
+        result.innerHTML = `
+          <div class="cv-progress-result-icon">${success ? "&#10003;" : "&#10007;"}</div>
+          <div class="cv-progress-result-text">
+            <div class="cv-progress-result-title">${title}</div>
+            <div class="cv-progress-result-detail">${detail}</div>
+          </div>
+        `;
+      }
+
+      // Upload with Progress Tracking
+      document
+        .getElementById("cv-upload-form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          const formData = new FormData();
+          const fileInput = document.getElementById("cv-file");
+          const submitButton = this.querySelector('button[type="submit"]');
+
+          if (!fileInput.files[0]) {
+            showMessage("cv-upload-message", "Please select a file", "error");
+            return;
+          }
+
+          formData.append("file", fileInput.files[0]);
+          const fileName = fileInput.files[0].name;
+
+          // Clear message and show progress tracker
+          const messageDiv = document.getElementById("cv-upload-message");
+          messageDiv.innerHTML = "";
+          showProgressTracker();
+
+          // Disable submit button
+          if (submitButton) {
+            submitButton.disabled = true;
+            const originalText = submitButton.innerHTML;
+            submitButton.innerHTML = originalText + '<span class="loading"></span>';
+          }
+
+          try {
+            // Step 1: Uploading
+            updateProgressStep("step-upload", "active", "Sending file...");
+            console.log("[UI] Uploading file:", fileName);
+
+            const response = await fetch("/api/cv/upload", {
+              method: "POST",
+              body: formData,
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              // Upload successful - mark step complete
+              updateProgressStep("step-upload", "complete", "File received");
+              console.log("[UI] CV upload successful, starting processing simulation");
+
+              // Simulate processing steps (actual processing happens in backend)
+              // Step 2: Parsing
+              updateProgressStep("step-parse", "active", "Reading DOCX...");
+              await new Promise(r => setTimeout(r, 800));
+              updateProgressStep("step-parse", "complete", "Document parsed");
+
+              // Step 3: Chunking
+              updateProgressStep("step-chunk", "active", "Creating chunks...");
+              await new Promise(r => setTimeout(r, 600));
+              updateProgressStep("step-chunk", "complete", "Text chunked");
+
+              // Step 4: Embeddings
+              updateProgressStep("step-embed", "active", "Generating vectors...");
+              await new Promise(r => setTimeout(r, 1200));
+              updateProgressStep("step-embed", "complete", "Embeddings ready");
+
+              // Step 5: ChromaDB
+              updateProgressStep("step-chromadb", "active", "Storing in ChromaDB...");
+              await new Promise(r => setTimeout(r, 1000));
+              updateProgressStep("step-chromadb", "complete", "Collection created");
+
+              // Step 6: Profile extraction
+              updateProgressStep("step-profile", "active", "Analysing with Ollama...");
+              await new Promise(r => setTimeout(r, 1500));
+              updateProgressStep("step-profile", "complete", "Profile extracted");
+
+              // Show success result
+              showProgressResult(
+                true,
+                "Document Processing Complete",
+                `${fileName} has been processed and stored in ChromaDB. Profile extracted successfully.`
+              );
+
+              fileInput.value = "";
+              loadCVStatus();
+              loadCollections();
+            } else {
+              console.error("[UI] CV upload failed:", data.error);
+              updateProgressStep("step-upload", "error", "Upload failed");
+              showProgressResult(
+                false,
+                "Document Processing Failed",
+                data.error || "Unknown error occurred"
+              );
+              showErrorBanner(`CV upload failed: ${data.error}`);
+            }
+          } catch (error) {
+            console.error("[UI] CV upload error:", error);
+            updateProgressStep("step-upload", "error", "Network error");
+            showProgressResult(
+              false,
+              "Document Processing Failed",
+              error.message || "Network error occurred"
+            );
+            showErrorBanner(`CV upload error: ${error.message}`);
+          } finally {
+            // Re-enable submit button
+            if (submitButton) {
+              submitButton.disabled = false;
+              submitButton.innerHTML = submitButton.innerHTML.replace('<span class="loading"></span>', '');
+            }
+          }
+        });
+
+      // Update Status LED Indicators
+      function updateStatusLEDs(status) {
+        const scraperLED = document.getElementById('scraper-led');
+        const processorLED = document.getElementById('processor-led');
+
+        if (scraperLED && status.scraper) {
+          if (status.scraper.status === 'running') {
+            scraperLED.className = 'status-led status-led-active';
+            scraperLED.title = `Scraper: ${status.scraper.message || 'Running'}`;
+          } else {
+            scraperLED.className = 'status-led status-led-inactive';
+            scraperLED.title = `Scraper: ${status.scraper.message || 'Inactive'}`;
+          }
+        }
+
+        if (processorLED && status.processor) {
+          if (status.processor.status === 'running') {
+            processorLED.className = 'status-led status-led-active';
+            processorLED.title = `Processor: ${status.processor.message || 'Running'}`;
+          } else {
+            processorLED.className = 'status-led status-led-inactive';
+            processorLED.title = `Processor: ${status.processor.message || 'Inactive'}`;
+          }
+        }
+      }
+
+      // Service Status
+      async function refreshStatus() {
+        const statusDiv = document.getElementById("service-status");
+        const serviceItems = statusDiv.querySelectorAll(".service-item");
+
+        // Add refreshing animation
+        serviceItems.forEach(item => item.classList.add("refreshing"));
+
+        try {
+          console.log("[UI] Refreshing service status...");
+          const response = await fetch("/api/status");
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const status = await response.json();
+
+          let html = "";
+
+          for (const [service, info] of Object.entries(status)) {
+            const statusClass = `status-${info.status}`;
+            const timestamp = new Date().toLocaleTimeString();
+            html += `
+                        <div class="service-item">
+                            <div class="service-name">
+                                <span class="status-indicator ${statusClass}"></span>
+                                ${service.charAt(0).toUpperCase() + service.slice(1)}
+                            </div>
+                            <div class="service-message">${info.message || "No message"}</div>
+                            <div class="service-timestamp">Last updated: ${timestamp}</div>
+                        </div>
+                    `;
+          }
+
+          statusDiv.innerHTML = html;
+
+          // Update LED indicators in header
+          updateStatusLEDs(status);
+
+          console.log("[UI] Service status refreshed successfully");
+        } catch (error) {
+          console.error("[UI] Error loading status:", error);
+          statusDiv.innerHTML =
+            `<p class="message message-error">Error loading status: ${error.message}</p>`;
+          showErrorBanner(`Failed to load service status: ${error.message}`);
+        } finally {
+          // Remove refreshing animation
+          serviceItems.forEach(item => item.classList.remove("refreshing"));
+        }
+      }
+
+      // Toggle source group expansion
+      function toggleSourceGroup(groupId) {
+        const group = document.getElementById(`source-group-${groupId}`);
+        if (group) {
+          group.classList.toggle('collapsed');
+        }
+      }
+
+      // Load Sources (grouped display)
+      async function loadSources() {
+        const sourcesDiv = document.getElementById("sources-list");
+        if (!sourcesDiv) return;
+        try {
+          console.log("[UI] Loading sources...");
+
+          // Remember which groups are collapsed before reloading
+          const collapsedGroups = new Set();
+          document.querySelectorAll('.source-group.collapsed').forEach(group => {
+            const groupId = group.id.replace('source-group-', '');
+            collapsedGroups.add(groupId);
+          });
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+          const response = await fetch("/api/sources", { signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (data.sources && data.sources.length > 0) {
+            // Group sources by their group property
+            const grouped = {};
+            data.sources.forEach(source => {
+              const groupKey = source.group || 'general';
+              if (!grouped[groupKey]) {
+                grouped[groupKey] = [];
+              }
+              grouped[groupKey].push(source);
+            });
+
+            // Sort groups by order
+            const sortedGroups = Object.keys(grouped).sort((a, b) => {
+              const orderA = SOURCE_GROUPS[a]?.order || 99;
+              const orderB = SOURCE_GROUPS[b]?.order || 99;
+              return orderA - orderB;
+            });
+
+            let html = '';
+            sortedGroups.forEach(groupKey => {
+              const groupInfo = SOURCE_GROUPS[groupKey] || { name: groupKey, order: 99 };
+              const sources = grouped[groupKey];
+              const enabledCount = sources.filter(s => s.enabled).length;
+
+              const isCollapsed = collapsedGroups.has(groupKey);
+              const allEnabled = sources.length > 0 && enabledCount === sources.length;
+              html += `
+                <div class="source-group${isCollapsed ? ' collapsed' : ''}" id="source-group-${groupKey}">
+                  <div class="source-group-header">
+                    <div onclick="toggleSourceGroup('${groupKey}')" style="flex: 1; display: flex; justify-content: space-between; cursor: pointer;">
+                      <div>
+                        <span class="source-group-title">${groupInfo.name}</span>
+                        <span class="source-group-count">(${enabledCount}/${sources.length} enabled)</span>
+                      </div>
+                      <span class="source-group-toggle">▼</span>
+                    </div>
+                    <label class="toggle-switch" onclick="event.stopPropagation()">
+                      <input type="checkbox" ${allEnabled ? 'checked' : ''} onchange="toggleBoard('${groupKey}', this.checked)">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+                  <div class="source-group-content">
+              `;
+
+              sources.forEach(source => {
+                const parserStatus = source.has_parser ? 'has-parser' : 'no-parser';
+                const parserLabel = source.has_parser ? 'Parser' : 'Generic';
+                const safeName = source.name.replace(/'/g, "\\'");
+                html += `
+                  <div class="source-item" data-source-name="${source.name.replace(/"/g, '&quot;')}" data-source-url="${(source.url || '').replace(/"/g, '&quot;')}" data-source-dynamic="${source.dynamic || false}">
+                    <input type="checkbox" ${source.enabled ? "checked" : ""}
+                           onchange="toggleSource('${safeName}', this.checked)"
+                           title="Enable/disable ${source.name}">
+                    <span class="source-item-name">${source.name}</span>
+                    <div class="source-item-actions">
+                      <span class="source-item-status ${parserStatus}">${parserLabel}</span>
+                      <button class="btn btn-secondary btn-small" style="padding: 3px 8px; font-size: 0.75em;"
+                              onclick="assessSourceParserFromRow(this)"
+                              title="Test parser - see Status > Error History for errors">Assess</button>
+                    </div>
+                    <button class="source-item-delete"
+                            onclick="removeSource('${safeName}')"
+                            title="Remove source">✕</button>
+                  </div>
+                `;
+              });
+
+              html += `
+                  </div>
+                </div>
+              `;
+            });
+
+            sourcesDiv.innerHTML = html;
+            console.log("[UI] Loaded", data.sources.length, "sources in", sortedGroups.length, "groups");
+          } else {
+            sourcesDiv.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon">🔍</div>
+                <div class="empty-state-message">No sources configured</div>
+                <div class="empty-state-hint">Add a source below to begin scraping jobs.</div>
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error("[UI] Error loading sources:", error);
+          const el = document.getElementById("sources-list");
+          if (el) {
+            el.innerHTML = `<p class="message message-error">Error loading sources: ${error.message}. <button class="btn btn-secondary btn-small" onclick="loadSources()">Retry</button></p>`;
+          }
+          showErrorBanner(`Failed to load sources: ${error.message}`);
+        }
+      }
+
+      async function loadScraperFilters() {
+        try {
+          const response = await fetch("/api/scraper-filters");
+          if (!response.ok) return;
+          const data = await response.json();
+          const locs = data.locations || [];
+          const workTypes = data.work_type || [];
+          const minSalary = data.min_salary || 0;
+          const locSelect = document.getElementById("filter-location");
+          const wtSelect = document.getElementById("filter-worktype");
+          const salarySelect = document.getElementById("filter-salary");
+          if (!locSelect || !wtSelect || !salarySelect) return;
+          // Set location dropdown: infer from locations
+          if (locs.length === 0) {
+            locSelect.value = "";
+          } else {
+            const hasUK = locs.some(l => /uk|london|manchester|birmingham|leeds|glasgow|edinburgh/i.test(String(l)));
+            const hasEurope = locs.some(l => /europe|germany|france|netherlands|spain|ireland/i.test(String(l)));
+            if (hasUK && hasEurope) locSelect.value = "uk,europe";
+            else if (hasUK) locSelect.value = "uk";
+            else if (hasEurope) locSelect.value = "europe";
+            else locSelect.value = "";
+          }
+          // Set work type dropdown
+          if (workTypes.length === 0) {
+            wtSelect.value = "";
+          } else {
+            const hasRemote = workTypes.some(w => /remote/i.test(String(w)));
+            const hasHybrid = workTypes.some(w => /hybrid/i.test(String(w)));
+            if (hasRemote && hasHybrid) wtSelect.value = "remote,hybrid";
+            else if (hasRemote) wtSelect.value = "remote";
+            else if (hasHybrid) wtSelect.value = "hybrid";
+            else wtSelect.value = "";
+          }
+          // Set salary
+          salarySelect.value = String(minSalary);
+          applyFilters();
+        } catch (e) {
+          console.warn("[UI] Could not load scraper filters:", e);
+        }
+      }
+
+      async function saveScraperFilters() {
+        const locationVal = document.getElementById("filter-location").value;
+        const workTypeVal = document.getElementById("filter-worktype").value;
+        const salaryVal = parseInt(document.getElementById("filter-salary").value) || 0;
+        const LOCATION_MAP = {
+          "uk": ["UK", "London", "Manchester", "Birmingham", "Leeds", "Glasgow", "Edinburgh"],
+          "europe": ["Europe", "Germany", "France", "Netherlands", "Spain", "Ireland"],
+          "uk,europe": ["UK", "London", "Manchester", "Birmingham", "Leeds", "Glasgow", "Edinburgh", "Europe", "Germany", "France", "Netherlands", "Spain", "Ireland"]
+        };
+        const WORKTYPE_MAP = {
+          "remote": ["100% Remote"],
+          "hybrid": ["Hybrid"],
+          "remote,hybrid": ["100% Remote", "Hybrid"]
+        };
+        const locations = LOCATION_MAP[locationVal] || [];
+        const workType = WORKTYPE_MAP[workTypeVal] || [];
+        try {
+          const response = await fetch("/api/scraper-filters", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              min_salary: salaryVal,
+              locations,
+              work_type: workType
+            })
+          });
+          const data = await response.json();
+          if (response.ok) {
+            showMessage("source-message", data.message || "Scraper filters saved", "success");
+          } else {
+            showMessage("source-message", data.error || "Failed to save", "error");
+          }
+        } catch (e) {
+          showMessage("source-message", `Error: ${e.message}`, "error");
+        }
+      }
+
+      // Toggle Source
+      async function toggleSource(name, enabled) {
+        try {
+          console.log("[UI] Toggling source:", name, enabled ? "enable" : "disable");
+          const response = await fetch("/api/sources", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name,
+              action: enabled ? "enable" : "disable",
+            }),
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+            console.log("[UI] Source toggled successfully");
+            showMessage("source-message", data.message, "success");
+            loadSources();
+          } else {
+            console.error("[UI] Failed to toggle source:", data.error);
+            showMessage("source-message", data.error, "error");
+            showErrorBanner(`Failed to toggle source: ${data.error}`);
+          }
+        } catch (error) {
+          console.error("[UI] Error toggling source:", error);
+          showMessage("source-message", `Error: ${error.message}`, "error");
+          showErrorBanner(`Error toggling source: ${error.message}`);
+        }
+      }
+
+      // Remove Source
+      async function removeSource(name) {
+        if (!confirm(`Remove source "${name}"? This cannot be undone.`)) {
+          return;
+        }
+
+        try {
+          console.log("[UI] Removing source:", name);
+          const response = await fetch("/api/sources", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+            console.log("[UI] Source removed successfully");
+            showMessage("source-message", data.message, "success");
+            loadSources();
+          } else {
+            console.error("[UI] Failed to remove source:", data.error);
+            showMessage("source-message", data.error, "error");
+            showErrorBanner(`Failed to remove source: ${data.error}`);
+          }
+        } catch (error) {
+          console.error("[UI] Error removing source:", error);
+          showMessage("source-message", `Error: ${error.message}`, "error");
+          showErrorBanner(`Error removing source: ${error.message}`);
+        }
+      }
+
+      // Toggle all sources in a board
+      async function toggleBoard(boardId, enabled) {
+        try {
+          console.log("[UI] Toggling board:", boardId, enabled ? "enable" : "disable");
+          const response = await fetch("/api/sources/board/toggle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              board: boardId,
+              enabled: enabled,
+            }),
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+            console.log("[UI] Board toggled successfully");
+            showMessage("source-message", `${data.affected_count} sources ${enabled ? 'enabled' : 'disabled'}`, "success");
+            loadSources();
+          } else {
+            console.error("[UI] Failed to toggle board:", data.error);
+            showMessage("source-message", data.error || "Failed to toggle board", "error");
+            showErrorBanner(`Failed to toggle board: ${data.error || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error("[UI] Error toggling board:", error);
+          showMessage("source-message", `Error: ${error.message}`, "error");
+          showErrorBanner(`Error toggling board: ${error.message}`);
+        }
+      }
+
+      // Assess Parser for a specific source (from Sources list)
+      async function assessSourceParserFromRow(btn) {
+        const row = btn.closest('.source-item');
+        if (!row) return;
+        const name = row.dataset.sourceName || '';
+        const url = row.dataset.sourceUrl || '';
+        const dynamic = row.dataset.sourceDynamic === 'true';
+        if (!url) {
+          showMessage("source-message", `No URL for ${name}`, "error");
+          return;
+        }
+        await assessSourceParser(name, url, dynamic, btn);
+      }
+
+      async function assessSourceParser(name, url, dynamic, btnElement) {
+        const testResultsDiv = document.getElementById("test-results");
+        const origHtml = testResultsDiv ? testResultsDiv.innerHTML : '';
+        if (testResultsDiv) {
+          testResultsDiv.innerHTML = `
+            <div class="message" style="display: flex; align-items: center;">
+              <span class="loading"></span>
+              <span style="margin-left: 10px;">Testing parser for ${name}...</span>
+            </div>
+          `;
+        }
+        if (btnElement) {
+          btnElement.disabled = true;
+        }
+        try {
+          const response = await fetch("/api/sources/test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: url, dynamic: dynamic })
+          });
+          const data = await response.json();
+          if (testResultsDiv) {
+            if (response.ok && data.success) {
+              testResultsDiv.innerHTML = `
+                <div class="message message-success">
+                  <strong>Parser OK for ${name}</strong><br>
+                  ${data.message || "Source is accessible."}
+                  ${data.jobs_found ? `<br><small>Found ${data.jobs_found} job listings.</small>` : ""}
+                  <br><small>See Status &gt; Error History for any parser errors.</small>
+                </div>
+              `;
+            } else {
+              testResultsDiv.innerHTML = `
+                <div class="message message-error">
+                  <strong>Parser issue for ${name}</strong><br>
+                  ${data.message || data.error || "Source could not be accessed."}
+                  <br><small>See Status &gt; Error History for details.</small>
+                </div>
+              `;
+            }
+          }
+        } catch (e) {
+          if (testResultsDiv) {
+            testResultsDiv.innerHTML = `
+              <div class="message message-error">
+                <strong>Test failed for ${name}</strong><br>${e.message}
+              </div>
+            `;
+          }
+        } finally {
+          if (btnElement) {
+            btnElement.disabled = false;
+          }
+        }
+      }
+
+      // Test Source Feasibility (F5.4)
+      async function testSource(event) {
+        const testResultsDiv = document.getElementById("test-results");
+        const sourceUrl = document.getElementById("source-url").value.trim();
+        const sourceDynamic = document.getElementById("source-dynamic").checked;
+        const testButton = event ? event.target : document.querySelector('button[onclick*="testSource"]');
+
+        if (!sourceUrl) {
+          testResultsDiv.innerHTML = `
+            <div class="message message-error">Please enter a URL to test.</div>
+          `;
+          return;
+        }
+
+        if (!sourceUrl.startsWith("http://") && !sourceUrl.startsWith("https://")) {
+          testResultsDiv.innerHTML = `
+            <div class="message message-error">URL must start with http:// or https://</div>
+          `;
+          return;
+        }
+
+        // Show loading state
+        testResultsDiv.innerHTML = `
+          <div class="message" style="display: flex; align-items: center;">
+            <span class="loading"></span>
+            <span style="margin-left: 10px;">Testing source feasibility...</span>
+          </div>
+        `;
+
+        if (testButton) {
+          testButton.disabled = true;
+          const originalText = testButton.innerHTML;
+          testButton.innerHTML = originalText + '<span class="loading"></span>';
+        }
+
+        try {
+          console.log("[UI] Testing source:", sourceUrl);
+          const response = await fetch("/api/sources/test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              url: sourceUrl,
+              dynamic: sourceDynamic,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            console.log("[UI] Source test successful");
+            if (data.success) {
+              testResultsDiv.innerHTML = `
+                <div class="message message-success">
+                  <strong>✅ Test Successful!</strong><br>
+                  ${data.message || "Source is accessible and can be scraped."}
+                  ${data.jobs_found ? `<br><small>Found ${data.jobs_found} job listings.</small>` : ""}
+                </div>
+              `;
+            } else {
+              testResultsDiv.innerHTML = `
+                <div class="message message-error">
+                  <strong>❌ Test Failed</strong><br>
+                  ${data.message || data.error || "Source could not be accessed or scraped."}
+                </div>
+              `;
+            }
+          } else {
+            console.error("[UI] Source test failed:", data.error);
+            testResultsDiv.innerHTML = `
+              <div class="message message-error">
+                <strong>❌ Test Failed</strong><br>
+                ${data.message || data.error || "Unable to test source."}
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error("[UI] Error testing source:", error);
+          testResultsDiv.innerHTML = `
+            <div class="message message-error">
+              <strong>❌ Test Error</strong><br>
+              ${error.message || "An error occurred while testing the source."}
+            </div>
+          `;
+        } finally {
+          if (testButton) {
+            testButton.disabled = false;
+            testButton.innerHTML = testButton.innerHTML.replace('<span class="loading"></span>', '');
+          }
+        }
+      }
+
+      // Add Source
+      document
+        .getElementById("add-source-form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          const submitButton = this.querySelector('button[type="submit"]');
+          const formData = {
+            name: document.getElementById("source-name").value.trim(),
+            url: document.getElementById("source-url").value.trim(),
+            dynamic: document.getElementById("source-dynamic").checked,
+          };
+
+          // Validation
+          if (!formData.name) {
+            showMessage("source-message", "Source name is required", "error");
+            return;
+          }
+          if (!formData.url) {
+            showMessage("source-message", "Source URL is required", "error");
+            return;
+          }
+          if (!formData.url.startsWith("http://") && !formData.url.startsWith("https://")) {
+            showMessage("source-message", "URL must start with http:// or https://", "error");
+            return;
+          }
+
+          // Disable submit button
+          if (submitButton) {
+            submitButton.disabled = true;
+            const originalText = submitButton.innerHTML;
+            submitButton.innerHTML = originalText + '<span class="loading"></span>';
+          }
+
+          try {
+            console.log("[UI] Adding source:", formData.name);
+            const response = await fetch("/api/sources", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(formData),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              console.log("[UI] Source added successfully");
+              showMessage("source-message", data.message, "success");
+              document.getElementById("add-source-form").reset();
+              loadSources();
+            } else {
+              console.error("[UI] Failed to add source:", data.message || data.error);
+              showMessage(
+                "source-message",
+                data.message || data.error,
+                "error",
+              );
+              showErrorBanner(`Failed to add source: ${data.message || data.error}`);
+            }
+          } catch (error) {
+            console.error("[UI] Error adding source:", error);
+            showMessage("source-message", `Error: ${error.message}`, "error");
+            showErrorBanner(`Error adding source: ${error.message}`);
+          } finally {
+            // Re-enable submit button
+            if (submitButton) {
+              submitButton.disabled = false;
+              submitButton.innerHTML = submitButton.innerHTML.replace('<span class="loading"></span>', '');
+            }
+          }
+        });
+
+      // Load Collections
+      async function loadCollections() {
+        const collectionsDiv = document.getElementById("collections-list");
+        if (!collectionsDiv) {
+          console.warn("[UI] loadCollections: collections-list element not found");
+          return;
+        }
+        try {
+          console.log("[UI] Loading collections...");
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+          const response = await fetch("/api/collections", { signal: controller.signal });
+          clearTimeout(timeoutId);
+
+          let data;
+          try {
+            data = await response.json();
+          } catch (_) {
+            data = {};
+          }
+
+          if (!response.ok) {
+            const msg = data.error || `HTTP ${response.status}`;
+            throw new Error(msg);
+          }
+
+          if (data.collections && data.collections.length > 0) {
+            let html = '<ul style="list-style: none; padding: 0;">';
+            data.collections.forEach((collection) => {
+              const isActive = collection.active || false;
+              const displayName = collection.friendly_name || collection.name;
+              html += `
+                            <li style="padding: 10px; margin-bottom: 10px; background: var(--soft-cream); border-radius: 4px; border: 1px solid var(--border);">
+                                <strong>${displayName}</strong>
+                                ${isActive ? '<span class="collection-active">ACTIVE</span>' : ''}
+                                <br>
+                                <span style="color: var(--light-coffee); font-size: 0.9em;">
+                                    Created: ${collection.created_at} | Chunks: ${collection.count}
+                                </span>
+                                <br>
+                                <label style="margin-top: 5px; display: inline-block;">
+                                    <input type="radio" name="active-collection" value="${collection.name}"
+                                           class="collection-radio"
+                                           ${isActive ? 'checked' : ''}
+                                           onchange="setActiveCollection('${collection.name}')">
+                                    Set as Active
+                                </label>
+                                <button class="btn btn-secondary" style="margin-top: 5px; padding: 5px 10px; font-size: 0.85em; margin-left: 10px;"
+                                        onclick="deleteCollection('${collection.name}')">Delete</button>
+                            </li>
+                        `;
+            });
+            html += "</ul>";
+            collectionsDiv.innerHTML = html;
+            console.log("[UI] Loaded", data.collections.length, "collections");
+          } else {
+            collectionsDiv.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon">📚</div>
+                <div class="empty-state-message">No collections found</div>
+                <div class="empty-state-hint">Upload a CV to create a collection.</div>
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error("[UI] Error loading collections:", error);
+          const el = document.getElementById("collections-list");
+          if (el) {
+            el.innerHTML = `<p class="message message-error">Error loading collections: ${error.message}. <button class="btn btn-secondary btn-small" onclick="loadCollections()">Retry</button></p>`;
+          }
+          showErrorBanner(`Failed to load collections: ${error.message}`);
+          // Log to Error History so it appears in Status tab
+          fetch("/api/errors", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              service: "web",
+              type: "collections_error",
+              message: `Collections failed to load: ${error.message}`,
+              details: { endpoint: "/api/collections" }
+            })
+          }).catch(() => {});
+        }
+      }
+
+      // Set Active Collection
+      async function setActiveCollection(name) {
+        try {
+          console.log("[UI] Setting active collection:", name);
+          const response = await fetch("/api/collections", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: name,
+              action: "set_active"
+            }),
+          });
+
+          const data = await response.json();
+          if (response.ok) {
+            console.log("[UI] Active collection set successfully");
+            showMessage("cv-upload-message", data.message || "Active collection updated", "success");
+            loadCollections();
+          } else {
+            console.error("[UI] Failed to set active collection:", data.error);
+            showMessage("cv-upload-message", data.error, "error");
+            showErrorBanner(`Failed to set active collection: ${data.error}`);
+          }
+        } catch (error) {
+          console.error("[UI] Error setting active collection:", error);
+          showMessage("cv-upload-message", `Error: ${error.message}`, "error");
+          showErrorBanner(`Error setting active collection: ${error.message}`);
+        }
+      }
+
+      // Delete Collection
+      async function deleteCollection(name) {
+        if (!confirm(`Are you sure you want to delete collection "${name}"? This action cannot be undone.`)) {
+          return;
+        }
+
+        try {
+          console.log("[UI] Deleting collection:", name);
+          const response = await fetch(
+            `/api/collections?name=${encodeURIComponent(name)}`,
+            {
+              method: "DELETE",
+            },
+          );
+
+          const data = await response.json();
+          if (response.ok) {
+            console.log("[UI] Collection deleted successfully");
+            showMessage("cv-upload-message", data.message, "success");
+            loadCollections();
+          } else {
+            console.error("[UI] Failed to delete collection:", data.error);
+            showMessage("cv-upload-message", data.error, "error");
+            showErrorBanner(`Failed to delete collection: ${data.error}`);
+          }
+        } catch (error) {
+          console.error("[UI] Error deleting collection:", error);
+          showMessage("cv-upload-message", `Error: ${error.message}`, "error");
+          showErrorBanner(`Error deleting collection: ${error.message}`);
+        }
+      }
+
+      // Load Schedule
+      async function loadSchedule() {
+        try {
+          console.log("[UI] Loading schedule...");
+          const response = await fetch("/api/schedule/next-run");
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          const scheduleDiv = document.getElementById("schedule-info");
+          if (data.next_run) {
+            // Format days display based on frequency (case-insensitive)
+            let daysDisplay = "";
+            const freq = (data.frequency || "").toLowerCase();
+            if (freq === "daily") {
+              daysDisplay = "Every day";
+            } else if (freq === "monthly") {
+              daysDisplay = "Monthly";
+            } else {
+              daysDisplay = data.days && data.days.length > 0 ? data.days.join(", ") : "Not set";
+            }
+
+            scheduleDiv.innerHTML = `
+              <div class="schedule-info-row">
+                <span><strong>Status:</strong> <span style="color: var(--success);">Enabled</span></span>
+                <span><strong>Frequency:</strong> ${data.frequency}</span>
+                <span><strong>Time:</strong> ${data.time}</span>
+                <span><strong>Days:</strong> ${daysDisplay}</span>
+                <span><strong>Next Run:</strong> ${new Date(data.next_run).toLocaleString()}</span>
+              </div>
+            `;
+            console.log("[UI] Schedule loaded");
+
+            // Populate form with current values
+            document.getElementById("schedule-enabled").checked = true;
+            document.getElementById("schedule-frequency").value = data.frequency || 'weekly';
+            document.getElementById("schedule-time").value = data.time || '09:00';
+
+            // Set day checkboxes
+            document.querySelectorAll('input[name="days"]').forEach(cb => {
+              cb.checked = data.days && data.days.includes(cb.value);
+            });
+          } else {
+            scheduleDiv.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon">⏰</div>
+                <div class="empty-state-message">No schedule configured</div>
+                <div class="empty-state-hint">Use the form below to configure scheduling.</div>
+              </div>
+            `;
+            document.getElementById("schedule-enabled").checked = false;
+          }
+
+          // Show/hide days based on frequency
+          updateDaysVisibility();
+        } catch (error) {
+          console.error("[UI] Error loading schedule:", error);
+          document.getElementById("schedule-info").innerHTML =
+            `<p class="message message-error">Error loading schedule: ${error.message}</p>`;
+          showErrorBanner(`Failed to load schedule: ${error.message}`);
+        }
+      }
+
+      // Update days visibility based on frequency selection
+      function updateDaysVisibility() {
+        try {
+          const frequencyEl = document.getElementById("schedule-frequency");
+          const daysGroup = document.getElementById("days-group");
+          if (!frequencyEl || !daysGroup) return;
+
+          const frequency = frequencyEl.value;
+          if (frequency === "weekly") {
+            daysGroup.style.display = "block";
+          } else {
+            daysGroup.style.display = "none";
+          }
+        } catch (error) {
+          console.warn("[UI] Error updating days visibility:", error);
+        }
+      }
+
+      // Save Schedule
+      async function saveSchedule(e) {
+        e.preventDefault();
+
+        const enabled = document.getElementById("schedule-enabled").checked;
+        const frequency = document.getElementById("schedule-frequency").value;
+        const time = document.getElementById("schedule-time").value;
+        const daysCheckboxes = document.querySelectorAll('input[name="days"]:checked');
+        const days = Array.from(daysCheckboxes).map(cb => cb.value);
+
+        if (enabled && frequency === 'weekly' && days.length === 0) {
+          showMessage("schedule-message", "Please select at least one day for weekly schedule", "error");
+          return;
+        }
+
+        const scheduleData = {
+          enabled: enabled,
+          frequency: frequency,
+          time: time,
+          days: days
+        };
+
+        try {
+          console.log("[UI] Saving schedule:", scheduleData);
+          const response = await fetch("/api/schedule", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(scheduleData),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            console.log("[UI] Schedule saved successfully");
+            showMessage("schedule-message", data.message || "Schedule saved successfully", "success");
+            loadSchedule();
+          } else {
+            console.error("[UI] Failed to save schedule:", data.error);
+            showMessage("schedule-message", data.error || "Failed to save schedule", "error");
+          }
+        } catch (error) {
+          console.error("[UI] Error saving schedule:", error);
+          showMessage("schedule-message", `Error: ${error.message}`, "error");
+        }
+      }
+
+      // Add event listeners for schedule form
+      document.getElementById("schedule-form").addEventListener("submit", saveSchedule);
+      document.getElementById("schedule-frequency").addEventListener("change", updateDaysVisibility);
+
+      // Load Error History
+      async function loadErrorHistory() {
+        try {
+          console.log("[UI] Loading error history...");
+          const response = await fetch("/api/errors");
+
+          if (!response.ok) {
+            // If endpoint doesn't exist, show empty state
+            if (response.status === 404) {
+              document.getElementById("error-history").innerHTML = `
+                <div class="empty-state">
+                  <div class="empty-state-icon">✅</div>
+                  <div class="empty-state-message">No errors recorded</div>
+                  <div class="empty-state-hint">System is running smoothly.</div>
+                </div>
+              `;
+              return;
+            }
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          const errorHistoryDiv = document.getElementById("error-history");
+
+          if (data.errors && data.errors.length > 0) {
+            let html = '<ul style="list-style: none; padding: 0;">';
+            data.errors.slice(0, 10).forEach((error) => {
+              const timestamp = error.timestamp ? new Date(error.timestamp).toLocaleString() : "Unknown time";
+              html += `
+                <li style="padding: 10px; margin-bottom: 10px; background: var(--soft-cream); border-radius: 4px; border-left: 4px solid var(--error);">
+                  <strong>${error.service || "Unknown"}</strong>
+                  <span style="color: var(--light-coffee); font-size: 0.85em; margin-left: 10px;">${timestamp}</span>
+                  <br>
+                  <span style="color: var(--espresso);">${error.message || error.error || "Unknown error"}</span>
+                </li>
+              `;
+            });
+            html += "</ul>";
+            errorHistoryDiv.innerHTML = html;
+            console.log("[UI] Loaded", data.errors.length, "errors");
+          } else {
+            errorHistoryDiv.innerHTML = `
+              <div class="empty-state">
+                <div class="empty-state-icon">✅</div>
+                <div class="empty-state-message">No errors recorded</div>
+                <div class="empty-state-hint">System is running smoothly.</div>
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error("[UI] Error loading error history:", error);
+          document.getElementById("error-history").innerHTML =
+            `<p class="message message-error">Error loading error history: ${error.message}</p>`;
+        }
+      }
+
+      // Log Viewer Functions
+      let logAutoRefreshInterval = null;
+      let logRefreshCountdown = 10;
+      let logCountdownInterval = null;
+      let lastLogScrollPosition = 0;
+
+      function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      function colorizeLogContent(content) {
+        if (!content) return '<div class="log-empty-state">No logs available</div>';
+
+        const lines = content.split('\n');
+        const colorizedLines = lines.map(line => {
+          const escapedLine = escapeHtml(line);
+
+          if (line.includes('[ERROR]')) {
+            return `<span class="log-line-error">${escapedLine}</span>`;
+          } else if (line.includes('[WARNING]')) {
+            return `<span class="log-line-warning">${escapedLine}</span>`;
+          } else if (line.includes('[INFO]') && (line.includes('SUCCESS') || line.includes('completed') || line.includes('✓'))) {
+            return `<span class="log-line-success">${escapedLine}</span>`;
+          } else if (line.includes('[INFO]')) {
+            return `<span class="log-line-info">${escapedLine}</span>`;
+          } else {
+            return escapedLine;
+          }
+        });
+
+        return colorizedLines.join('\n');
+      }
+
+      async function loadScraperLogs() {
+        try {
+          console.log("[UI] Loading scraper logs...");
+          const logsContainer = document.getElementById("scraper-logs-container");
+
+          // Save scroll position before refresh
+          lastLogScrollPosition = logsContainer.scrollTop;
+          const wasAtBottom = (logsContainer.scrollHeight - logsContainer.scrollTop) <= (logsContainer.clientHeight + 50);
+
+          const response = await fetch("/api/logs/scraper?lines=500");
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          if (data.status === 'empty' || !data.content) {
+            logsContainer.innerHTML = '<div class="log-empty-state">No scraper logs available yet.<br>Logs will appear when the scraper runs.</div>';
+          } else {
+            const colorizedContent = colorizeLogContent(data.content);
+            logsContainer.innerHTML = colorizedContent;
+
+            // Auto-scroll to bottom on first load, otherwise preserve position
+            if (wasAtBottom || lastLogScrollPosition === 0) {
+              logsContainer.scrollTop = logsContainer.scrollHeight;
+            } else {
+              logsContainer.scrollTop = lastLogScrollPosition;
+            }
+          }
+
+          console.log(`[UI] Loaded ${data.lines || 0} lines of scraper logs`);
+        } catch (error) {
+          console.error("[UI] Error loading scraper logs:", error);
+          document.getElementById("scraper-logs-container").innerHTML =
+            `<div class="log-empty-state" style="color: #ef5350;">Error loading logs: ${escapeHtml(error.message)}</div>`;
+        }
+      }
+
+      async function loadProcessorLogs() {
+        try {
+          const logsContainer = document.getElementById("processor-logs-container");
+          const response = await fetch("/api/logs/processor?lines=500");
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          if (data.status === 'empty' || !data.content) {
+            logsContainer.innerHTML = '<div class="log-empty-state">No processor logs available yet.<br>Logs will appear when the processor runs (after a scrape).</div>';
+          } else {
+            logsContainer.innerHTML = colorizeLogContent(data.content);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+          }
+        } catch (error) {
+          console.error("[UI] Error loading processor logs:", error);
+          document.getElementById("processor-logs-container").innerHTML =
+            `<div class="log-empty-state" style="color: #ef5350;">Error loading logs: ${escapeHtml(error.message)}</div>`;
+        }
+      }
+
+      function updateLogRefreshIndicator() {
+        // Check if scraper is running by looking at the scraper LED status
+        const scraperLed = document.getElementById('scraper-led');
+        const isScraperRunning = scraperLed && scraperLed.classList.contains('status-led-active');
+
+        const indicator = document.getElementById('log-refresh-indicator');
+        const statusText = document.getElementById('refresh-status-text');
+
+        if (isScraperRunning) {
+          if (!logAutoRefreshInterval) {
+            startLogAutoRefresh();
+          }
+          indicator.classList.remove('paused');
+          indicator.classList.add('active');
+          statusText.textContent = 'active';
+        } else {
+          if (logAutoRefreshInterval) {
+            stopLogAutoRefresh();
+          }
+          indicator.classList.remove('active');
+          indicator.classList.add('paused');
+          statusText.textContent = 'paused';
+        }
+      }
+
+      function startLogAutoRefresh() {
+        if (logAutoRefreshInterval) return; // Already running
+
+        console.log("[UI] Starting log auto-refresh (10s interval)");
+        logRefreshCountdown = 10;
+
+        // Load logs immediately
+        loadScraperLogs();
+
+        // Set up countdown
+        logCountdownInterval = setInterval(() => {
+          logRefreshCountdown--;
+          updateRefreshCountdown();
+
+          if (logRefreshCountdown <= 0) {
+            logRefreshCountdown = 10;
+          }
+        }, 1000);
+
+        // Set up refresh interval
+        logAutoRefreshInterval = setInterval(() => {
+          loadScraperLogs();
+          logRefreshCountdown = 10;
+        }, 10000);
+      }
+
+      function stopLogAutoRefresh() {
+        if (logAutoRefreshInterval) {
+          console.log("[UI] Stopping log auto-refresh");
+          clearInterval(logAutoRefreshInterval);
+          logAutoRefreshInterval = null;
+        }
+
+        if (logCountdownInterval) {
+          clearInterval(logCountdownInterval);
+          logCountdownInterval = null;
+        }
+
+        document.getElementById('refresh-countdown').textContent = '';
+      }
+
+      function updateRefreshCountdown() {
+        const countdownEl = document.getElementById('refresh-countdown');
+        if (logAutoRefreshInterval && logRefreshCountdown > 0) {
+          countdownEl.textContent = `(next refresh in ${logRefreshCountdown}s)`;
+        } else {
+          countdownEl.textContent = '';
+        }
+      }
+
+      // Load CV Status
+      async function loadCVStatus() {
+        try {
+          console.log("[UI] Loading CV status...");
+          const response = await fetch("/api/cv/status");
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
+          const statusDiv = document.getElementById("cv-status");
+
+          if (data.status === "processed" && data.profile) {
+            let html = `<p><strong>Status:</strong> <span style="color: var(--success);">${data.status}</span></p>`;
+            html += formatCVProfile(data.profile);
+            statusDiv.innerHTML = html;
+          } else if (data.status === "processing") {
+            statusDiv.innerHTML = `
+              <p><strong>Status:</strong> <span style="color: var(--warning);">${data.status}</span></p>
+              <p>CV is being processed. Please wait...</p>
+            `;
+          } else if (data.status === "uploaded") {
+            statusDiv.innerHTML = `
+              <p><strong>Status:</strong> <span style="color: var(--caramel);">${data.status}</span></p>
+              <p>Document uploaded successfully. Processing will begin shortly.</p>
+            `;
+          } else {
+            statusDiv.innerHTML = `
+              <p><strong>Status:</strong> ${data.status || "Unknown"}</p>
+              <p>No Document uploaded yet. Upload a document to begin processing.</p>
+            `;
+          }
+          console.log("[UI] CV status loaded");
+        } catch (error) {
+          console.error("[UI] Error loading CV status:", error);
+          document.getElementById("cv-status").innerHTML =
+            `<p class="message message-error">CV status unavailable: ${error.message}</p>`;
+        }
+      }
+
+      // Format CV Profile
+      function formatCVProfile(profile) {
+        if (!profile) return "";
+
+        let html = '<div class="cv-profile">';
+
+        if (profile.skills && profile.skills.length > 0) {
+          html += '<h3>Skills</h3><ul>';
+          profile.skills.forEach(skill => {
+            html += `<li>${skill}</li>`;
+          });
+          html += '</ul>';
+        }
+
+        if (profile.domains && profile.domains.length > 0) {
+          html += '<h3>Domains</h3><ul>';
+          profile.domains.forEach(domain => {
+            html += `<li>${domain}</li>`;
+          });
+          html += '</ul>';
+        }
+
+        if (profile.experience) {
+          html += '<h3>Experience</h3>';
+          html += `<p>${profile.experience}</p>`;
+        }
+
+        html += '</div>';
+        return html;
+      }
+
+      // Show Message
+      function showMessage(elementId, message, type) {
+        const div = document.getElementById(elementId);
+        div.innerHTML = `<div class="message message-${type}">${message}</div>`;
+        setTimeout(() => {
+          div.innerHTML = "";
+        }, 5000);
+      }
+
+      // Toggle Breakdown
+      function toggleBreakdown(index, event) {
+        const breakdown = document.getElementById("breakdown-" + index);
+        if (!breakdown) return;
+
+        breakdown.classList.toggle("show");
+        const toggle = event ? event.target : null;
+        if (toggle) {
+          toggle.textContent = breakdown.classList.contains("show")
+            ? "Hide"
+            : "Show";
+        }
+      }
+
+      // Manual Scrape with Cooldown
+      async function triggerManualScrape() {
+        const button = document.getElementById("manual-scrape-btn");
+        if (!button) return;
+
+        // Disable button
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.innerHTML = '🔍 Triggering...<span class="loading"></span>';
+
+        try {
+          console.log("[UI] Triggering manual scrape...");
+          const response = await fetch("/api/scraper/trigger", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            console.log("[UI] Manual scrape triggered successfully");
+            showMessage("cv-upload-message", data.message || "Manual scrape started", "success");
+
+            // Start cooldown timer
+            const cooldownMinutes = data.cooldown_minutes || 30;
+            startScrapeCooldown(cooldownMinutes);
+          } else {
+            console.error("[UI] Manual scrape failed:", data.error);
+
+            if (response.status === 429) {
+              // Cooldown active
+              const remaining = data.cooldown_remaining_minutes || 30;
+              button.innerHTML = `🔍 Manual Scrape (${remaining}min)`;
+              showMessage("cv-upload-message", data.message, "error");
+
+              // Start countdown
+              startScrapeCooldown(remaining);
+            } else {
+              button.disabled = false;
+              button.innerHTML = originalText;
+              showMessage("cv-upload-message", data.error || "Failed to trigger scrape", "error");
+            }
+          }
+        } catch (error) {
+          console.error("[UI] Error triggering manual scrape:", error);
+          button.disabled = false;
+          button.innerHTML = originalText;
+          showMessage("cv-upload-message", `Error: ${error.message}`, "error");
+        }
+      }
+
+      // Clear Run Data
+      async function clearRunData() {
+        const button = document.getElementById("clear-run-data-btn");
+        if (!button) return;
+
+        if (!confirm("This will delete all raw, normalised, and scored job files from the previous run. Continue?")) return;
+
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.innerHTML = '🗑 Clearing...<span class="loading"></span>';
+
+        try {
+          const response = await fetch("/api/data/clear", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            showMessage("cv-upload-message", data.message || "Run data cleared", "success");
+          } else {
+            showMessage("cv-upload-message", `Error: ${data.error || "Clear failed"}`, "error");
+          }
+        } catch (error) {
+          console.error("[UI] Error clearing run data:", error);
+          showMessage("cv-upload-message", `Error: ${error.message}`, "error");
+        } finally {
+          button.disabled = false;
+          button.innerHTML = originalText;
+        }
+      }
+
+      // Scrape Cooldown Timer
+      let scrapeCooldownInterval = null;
+
+      function startScrapeCooldown(minutes) {
+        const button = document.getElementById("manual-scrape-btn");
+        if (!button) return;
+
+        let remaining = minutes;
+
+        // Clear any existing interval
+        if (scrapeCooldownInterval) {
+          clearInterval(scrapeCooldownInterval);
+        }
+
+        // Update button text
+        button.disabled = true;
+        button.innerHTML = `🔍 Manual Scrape (${remaining}min)`;
+
+        // Start countdown
+        scrapeCooldownInterval = setInterval(() => {
+          remaining--;
+
+          if (remaining <= 0) {
+            clearInterval(scrapeCooldownInterval);
+            scrapeCooldownInterval = null;
+            button.disabled = false;
+            button.innerHTML = '🔍 Manual Scrape';
+            console.log("[UI] Scrape cooldown expired");
+          } else {
+            button.innerHTML = `🔍 Manual Scrape (${remaining}min)`;
+          }
+        }, 60000); // Update every minute
+      }
+
+      // Check scrape cooldown on load
+      async function checkScrapeCooldown() {
+        try {
+          const response = await fetch("/api/scraper/cooldown");
+          if (!response.ok) return;
+
+          const data = await response.json();
+
+          if (data.cooldown_active && data.cooldown_remaining_minutes > 0) {
+            console.log("[UI] Scrape cooldown active:", data.cooldown_remaining_minutes, "minutes remaining");
+            startScrapeCooldown(data.cooldown_remaining_minutes);
+          }
+        } catch (error) {
+          console.error("[UI] Error checking scrape cooldown:", error);
+        }
+      }
+
+      // Initialize on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("[UI] Initialising dashboard...");
+        refreshStatus();
+        loadSources();
+        loadCollections();
+        loadSchedule();
+        loadCVStatus();
+        loadErrorHistory();
+        loadScraperLogs();
+        loadProcessorLogs();
+        loadScraperFilters();
+        checkScrapeCooldown();  // Check scrape button cooldown
+
+        // Initialize view to Top (filtered cream jobs)
+        showTopJobs();
+
+        // Auto-refresh status every 8 seconds (also check log refresh status)
+        setInterval(() => {
+          refreshStatus();
+          updateLogRefreshIndicator();
+        }, 8000);
+        console.log("[UI] Dashboard initialised");
+      });
+    </script>
+  </body>
+</html>

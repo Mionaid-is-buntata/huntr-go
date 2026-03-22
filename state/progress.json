@@ -1,0 +1,29 @@
+{
+  "project": "Huntr-AI Go Migration",
+  "created": "2026-03-21",
+  "branch": "feature/go-cutover",
+  "current_phase": "phase_5_cutover",
+  "phases": {
+    "setup": { "status": "completed" },
+    "phase_0_foundation": { "status": "completed" },
+    "phase_1_web": { "status": "completed" },
+    "phase_2_processor": { "status": "completed" },
+    "phase_3_scraper": { "status": "completed" },
+    "phase_4_docker": { "status": "completed" },
+    "phase_5_cutover": {
+      "status": "completed",
+      "started": "2026-03-22",
+      "completed": "2026-03-22",
+      "tasks": {
+        "restore_go_source": "completed",
+        "production_compose": "completed",
+        "env_example": "completed",
+        "config_template": "completed",
+        "fix_test_paths": "completed",
+        "migration_docs": "completed",
+        "update_claude_md": "completed"
+      },
+      "notes": "go-migration/ is now a self-contained deployable bundle. app/ preserved as Python reference."
+    }
+  }
+}

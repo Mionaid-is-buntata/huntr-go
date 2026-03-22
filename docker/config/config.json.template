@@ -1,0 +1,97 @@
+{
+  "job_sources": [
+    {
+      "name": "Reed",
+      "url": "https://www.reed.co.uk/jobs/software-developer-jobs-in-london?remote=true",
+      "dynamic": false,
+      "enabled": true
+    },
+    {
+      "name": "Indeed",
+      "url": "https://uk.indeed.com/jobs?q=Python+Developer+Remote&l=United+Kingdom",
+      "dynamic": false,
+      "enabled": true
+    },
+    {
+      "name": "Adzuna",
+      "url": "https://www.adzuna.co.uk/jobs/search?q=python+developer+remote",
+      "dynamic": false,
+      "enabled": true
+    },
+    {
+      "name": "Technojobs",
+      "url": "https://www.technojobs.co.uk/jobs/python",
+      "dynamic": false,
+      "enabled": true
+    },
+    {
+      "name": "CV-Library",
+      "url": "https://www.cv-library.co.uk/jobs/python-developer/remote",
+      "dynamic": false,
+      "enabled": true
+    },
+    {
+      "name": "Totaljobs",
+      "url": "https://www.totaljobs.com/jobs/python-developer/in-united-kingdom?remote=true",
+      "dynamic": false,
+      "enabled": true
+    },
+    {
+      "name": "LinkedIn",
+      "url": "https://www.linkedin.com/jobs/search/?keywords=Python%20Developer%20Remote&location=United%20Kingdom",
+      "dynamic": true,
+      "enabled": false
+    },
+    {
+      "name": "Glassdoor",
+      "url": "https://www.glassdoor.co.uk/Job/python-developer-remote-jobs-SRCH_KO0,23.htm",
+      "dynamic": false,
+      "enabled": false
+    },
+    {
+      "name": "RemoteWorker",
+      "url": "https://remoteworker.co.uk/jobs/",
+      "dynamic": false,
+      "enabled": false
+    },
+    {
+      "name": "Otta",
+      "url": "https://www.otta.com/jobs",
+      "dynamic": true,
+      "enabled": false
+    }
+  ],
+  "preferences": {
+    "tech_stack_keywords": ["Python", "Full Stack", "Django", "Flask", "React", "APIs", "Microservices", "AWS", "Docker"],
+    "domain_keywords": ["FinTech", "E-commerce", "SaaS", "Transport", "Payments", "Healthcare"],
+    "locations": ["Remote", "100% Remote", "Hybrid", "London", "Manchester", "UK", "Europe"],
+    "min_salary": 100000,
+    "work_type": ["100% Remote", "Hybrid"]
+  },
+  "scheduling": {
+    "scraper": {
+      "enabled": false,
+      "frequency": "daily",
+      "time": "09:00",
+      "days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    }
+  },
+  "cv": {
+    "chunked_processing": {
+      "enabled": true,
+      "chunk_size": 600,
+      "chunk_overlap": 120,
+      "top_k_chunks": 5
+    },
+    "vector_db": {
+      "max_collections": 3,
+      "auto_rotate": true
+    }
+  },
+  "email_enabled": true,
+  "email_config": {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587
+  },
+  "high_score_threshold": 70
+}
