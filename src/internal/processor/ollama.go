@@ -14,17 +14,19 @@ import (
 )
 
 const (
-	primaryModel     = "llama2-uncensored"
-	altPrimaryModel  = "mistral:7b-q4_K_M"
-	fallbackModel    = "phi:2.7b"
-	primaryRAMNeeded = 5.0 // GB
+	primaryModel          = "llama2-uncensored"
+	altPrimaryModel       = "mistral:7b-q4_K_M"
+	fallbackModel         = "phi:2.7b"
+	defaultEmbeddingModel = "nomic-embed-text"
+	primaryRAMNeeded      = 5.0 // GB
 )
 
-// OllamaClient holds the selected model and host configuration.
+// OllamaClient holds the selected models and host configuration.
 type OllamaClient struct {
-	Model  string
-	Host   string
-	Reason string
+	Model          string // LLM model for /api/generate
+	EmbeddingModel string // Embedding model for /api/embeddings
+	Host           string
+	Reason         string
 }
 
 func ollamaHost() string {
@@ -72,55 +74,81 @@ func checkModelAvailable(model, host string) bool {
 	return false
 }
 
-// SelectModel chooses the best available LLM model based on RAM and availability.
-func SelectModel() (*OllamaClient, error) {
+// SelectModel chooses the best available LLM and embedding models.
+// llmOverride and embeddingOverride allow config-driven model selection;
+// empty strings fall back to auto-detection.
+func SelectModel(llmOverride, embeddingOverride string) (*OllamaClient, error) {
 	host := ollamaHost()
 	ramMB := checkRAMAvailable()
 	ramGB := ramMB / 1024
 
-	for _, model := range []string{primaryModel, altPrimaryModel} {
-		if checkModelAvailable(model, host) {
-			if ramGB >= primaryRAMNeeded {
-				slog.Info("selected primary model", "model", model, "ram_gb", ramGB)
-				return &OllamaClient{
-					Model:  model,
-					Host:   host,
-					Reason: fmt.Sprintf("Primary model with sufficient RAM (%.1fGB)", ramGB),
-				}, nil
+	// Select LLM model
+	var llmModel, reason string
+	if llmOverride != "" && checkModelAvailable(llmOverride, host) {
+		llmModel = llmOverride
+		reason = fmt.Sprintf("Configured LLM model (%.1fGB RAM)", ramGB)
+		slog.Info("using configured LLM model", "model", llmModel)
+	} else {
+		if llmOverride != "" {
+			slog.Warn("configured LLM model not available, falling back", "model", llmOverride)
+		}
+		for _, model := range []string{primaryModel, altPrimaryModel} {
+			if checkModelAvailable(model, host) {
+				if ramGB >= primaryRAMNeeded {
+					llmModel = model
+					reason = fmt.Sprintf("Primary model with sufficient RAM (%.1fGB)", ramGB)
+					slog.Info("selected primary LLM model", "model", model, "ram_gb", ramGB)
+					break
+				}
+				slog.Warn("insufficient RAM for primary model", "model", model, "ram_gb", ramGB)
+				break
 			}
-			slog.Warn("insufficient RAM for primary model", "model", model, "ram_gb", ramGB)
-			break
+		}
+		if llmModel == "" && checkModelAvailable(fallbackModel, host) {
+			llmModel = fallbackModel
+			reason = "Fallback model (RAM pressure or primary unavailable)"
 		}
 	}
 
-	if checkModelAvailable(fallbackModel, host) {
-		return &OllamaClient{
-			Model:  fallbackModel,
-			Host:   host,
-			Reason: "Fallback model (RAM pressure or primary unavailable)",
-		}, nil
+	if llmModel == "" {
+		return nil, fmt.Errorf("no Ollama LLM models available (%s/%s/%s). Install with: ollama pull %s",
+			primaryModel, altPrimaryModel, fallbackModel, primaryModel)
 	}
 
-	return nil, fmt.Errorf("no Ollama models available (%s/%s/%s). Install with: ollama pull %s",
-		primaryModel, altPrimaryModel, fallbackModel, primaryModel)
+	// Select embedding model
+	embModel := defaultEmbeddingModel
+	if embeddingOverride != "" {
+		embModel = embeddingOverride
+	}
+	if !checkModelAvailable(embModel, host) {
+		slog.Warn("embedding model not available, will be pulled on first use", "model", embModel)
+	}
+
+	slog.Info("models selected", "llm", llmModel, "embedding", embModel)
+	return &OllamaClient{
+		Model:          llmModel,
+		EmbeddingModel: embModel,
+		Host:           host,
+		Reason:         reason,
+	}, nil
 }
 
 // GenerateEmbeddings calls the Ollama API to generate embeddings for text chunks.
-// This replaces the Python sentence-transformers approach.
-func GenerateEmbeddings(chunks []CVChunkWithEmbedding, model, host string) error {
-	url := fmt.Sprintf("http://%s/api/embeddings", host)
-	client := &http.Client{Timeout: 60 * time.Second}
+// Uses the client's EmbeddingModel for the /api/embeddings endpoint.
+func GenerateEmbeddings(chunks []CVChunkWithEmbedding, ollamaClient *OllamaClient) error {
+	url := fmt.Sprintf("http://%s/api/embeddings", ollamaClient.Host)
+	httpClient := &http.Client{Timeout: 60 * time.Second}
 
-	slog.Info("generating embeddings", "chunks", len(chunks), "model", model)
+	slog.Info("generating embeddings", "chunks", len(chunks), "model", ollamaClient.EmbeddingModel)
 
 	for i := range chunks {
 		if err := func() error {
 			body, _ := json.Marshal(map[string]string{
-				"model":  model,
+				"model":  ollamaClient.EmbeddingModel,
 				"prompt": chunks[i].Text,
 			})
 
-			resp, err := client.Post(url, "application/json", bytes.NewReader(body))
+			resp, err := httpClient.Post(url, "application/json", bytes.NewReader(body))
 			if err != nil {
 				return fmt.Errorf("embedding request %d: %w", i, err)
 			}

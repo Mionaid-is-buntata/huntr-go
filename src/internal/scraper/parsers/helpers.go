@@ -37,6 +37,8 @@ func ResolveURL(baseURL, href string) string {
 	return base.ResolveReference(ref).String()
 }
 
+var salaryRe = regexp.MustCompile(`£?\s*(\d+(?:\.\d+)?)\s*k?`)
+
 // ExtractSalaryNumber extracts a numeric salary from text like "£50,000 - £60,000" or "£50k".
 // Returns the lower bound if a range is given.
 func ExtractSalaryNumber(salaryText string) *int {
@@ -46,8 +48,7 @@ func ExtractSalaryNumber(salaryText string) *int {
 
 	text := strings.ToLower(strings.ReplaceAll(salaryText, ",", ""))
 
-	re := regexp.MustCompile(`£?\s*(\d+(?:\.\d+)?)\s*k?`)
-	matches := re.FindAllStringSubmatch(text, -1)
+	matches := salaryRe.FindAllStringSubmatch(text, -1)
 	if len(matches) == 0 {
 		return nil
 	}

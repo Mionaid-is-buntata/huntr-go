@@ -25,6 +25,7 @@ type Source struct {
 	Dynamic  bool     `json:"dynamic"`
 	Enabled  bool     `json:"enabled"`
 	Keywords []string `json:"keywords,omitempty"`
+	Group    string   `json:"group,omitempty"`
 }
 
 // Preferences holds user scoring and filtering preferences.
@@ -53,6 +54,8 @@ type SchedulerConfig struct {
 type CVConfig struct {
 	ChunkedProcessing ChunkConfig  `json:"chunked_processing"`
 	VectorDB          VectorConfig `json:"vector_db"`
+	LLMModel          string       `json:"llm_model,omitempty"`
+	EmbeddingModel    string       `json:"embedding_model,omitempty"`
 }
 
 // ChunkConfig defines CV text chunking parameters.

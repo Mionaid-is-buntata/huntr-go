@@ -13,7 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -31,7 +30,6 @@ type Server struct {
 	Paths      DataPaths
 	ConfigPath string
 	tmpl       *template.Template
-	tmplOnce   sync.Once
 }
 
 // NewServer creates a chi router with all routes registered.
@@ -39,6 +37,14 @@ func NewServer(paths DataPaths) *Server {
 	s := &Server{
 		Paths:      paths,
 		ConfigPath: paths.ConfigFile,
+	}
+
+	// Parse template eagerly; if missing, renderDashboard will retry
+	tmplPath := filepath.Join(paths.TemplateDir, "dashboard.html")
+	if t, err := template.New("dashboard.html").Funcs(templateFuncs).ParseFiles(tmplPath); err != nil {
+		slog.Error("failed to parse template at startup (will retry on request)", "error", err)
+	} else {
+		s.tmpl = t
 	}
 
 	r := chi.NewRouter()
@@ -208,20 +214,15 @@ var templateFuncs = template.FuncMap{
 
 func (s *Server) renderDashboard(w http.ResponseWriter, ctx DashboardContext) {
 	noCacheHeaders(w)
-	var tmplErr error
-	s.tmplOnce.Do(func() {
+	if s.tmpl == nil {
 		tmplPath := filepath.Join(s.Paths.TemplateDir, "dashboard.html")
 		t, err := template.New("dashboard.html").Funcs(templateFuncs).ParseFiles(tmplPath)
 		if err != nil {
-			tmplErr = err
+			slog.Error("error parsing template", "error", err)
+			writeJSON(w, 500, map[string]string{"error": "Template not found"})
 			return
 		}
 		s.tmpl = t
-	})
-	if s.tmpl == nil {
-		slog.Error("error parsing template", "error", tmplErr)
-		writeJSON(w, 500, map[string]string{"error": "Template not found"})
-		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := s.tmpl.Execute(w, ctx); err != nil {
@@ -256,29 +257,19 @@ func (s *Server) handleCVUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate DOCX magic bytes (PK zip header: 50 4B 03 04)
-	magic := make([]byte, 4)
-	if _, err := file.Read(magic); err != nil {
-		writeJSON(w, 400, map[string]string{"error": "Could not read file"})
+	// Read entire file, then validate DOCX magic bytes (PK zip header: 50 4B 03 04)
+	data, err := io.ReadAll(file)
+	if err != nil {
+		writeJSON(w, 500, map[string]string{"error": "Could not read file"})
 		return
 	}
-	if magic[0] != 0x50 || magic[1] != 0x4B || magic[2] != 0x03 || magic[3] != 0x04 {
+	if len(data) < 4 || data[0] != 0x50 || data[1] != 0x4B || data[2] != 0x03 || data[3] != 0x04 {
 		writeJSON(w, 400, map[string]string{"error": "Invalid file content. File does not appear to be a valid .docx"})
 		return
-	}
-	// Reset reader for full read
-	if seeker, ok := file.(io.Seeker); ok {
-		seeker.Seek(0, io.SeekStart)
 	}
 
 	os.MkdirAll(s.Paths.CVUploadDir, 0755)
 	savePath := filepath.Join(s.Paths.CVUploadDir, "cv_uploaded.docx")
-
-	data := make([]byte, header.Size)
-	if _, err := file.Read(data); err != nil {
-		writeJSON(w, 500, map[string]string{"error": "Upload failed: " + err.Error()})
-		return
-	}
 	if err := os.WriteFile(savePath, data, 0644); err != nil {
 		writeJSON(w, 500, map[string]string{"error": "Upload failed: " + err.Error()})
 		return
@@ -439,7 +430,10 @@ func (s *Server) handleSourcesPost(w http.ResponseWriter, r *http.Request) {
 
 	result := AddSource(cfg, data.Name, data.URL, data.Dynamic, data.Group, false)
 	if result.Success {
-		config.Save(s.ConfigPath, cfg)
+		if err := config.Save(s.ConfigPath, cfg); err != nil {
+			writeJSON(w, 500, map[string]string{"error": "Failed to save config: " + err.Error()})
+			return
+		}
 		writeJSON(w, 200, result)
 	} else {
 		writeJSON(w, 400, result)
@@ -478,7 +472,10 @@ func (s *Server) handleSourcesPut(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if success {
-		config.Save(s.ConfigPath, cfg)
+		if err := config.Save(s.ConfigPath, cfg); err != nil {
+			writeJSON(w, 500, map[string]string{"error": "Failed to save config: " + err.Error()})
+			return
+		}
 		writeJSON(w, 200, map[string]string{"status": "success", "message": "Source \"" + data.Name + "\" " + data.Action + "d"})
 	} else {
 		writeJSON(w, 404, map[string]string{"error": "Source \"" + data.Name + "\" not found"})
@@ -505,7 +502,10 @@ func (s *Server) handleSourcesDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if RemoveSource(cfg, data.Name) {
-		config.Save(s.ConfigPath, cfg)
+		if err := config.Save(s.ConfigPath, cfg); err != nil {
+			writeJSON(w, 500, map[string]string{"error": "Failed to save config: " + err.Error()})
+			return
+		}
 		slog.Info("source removed", "name", data.Name)
 		writeJSON(w, 200, map[string]string{"status": "success", "message": "Source \"" + data.Name + "\" removed"})
 	} else {
@@ -557,14 +557,18 @@ func (s *Server) handleBoardToggle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For now, toggle all sources (board grouping is a UI concern)
 	affected := 0
 	for i := range cfg.JobSources {
-		cfg.JobSources[i].Enabled = data.Enabled
-		affected++
+		if cfg.JobSources[i].Group == data.Board {
+			cfg.JobSources[i].Enabled = data.Enabled
+			affected++
+		}
 	}
 	if affected > 0 {
-		config.Save(s.ConfigPath, cfg)
+		if err := config.Save(s.ConfigPath, cfg); err != nil {
+			writeJSON(w, 500, map[string]string{"error": "Failed to save config: " + err.Error()})
+			return
+		}
 	}
 	writeJSON(w, 200, map[string]interface{}{"success": true, "affected_count": affected})
 }

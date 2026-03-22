@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/campbell/huntr-ai/internal/common"
@@ -69,7 +72,16 @@ func processCV() bool {
 
 	// Step 3: Select model and generate embeddings
 	slog.Info("step 3: generating embeddings")
-	ollamaClient, err := processor.SelectModel()
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		slog.Warn("config not available for model selection, using defaults", "error", err)
+	}
+	var llmOverride, embOverride string
+	if cfg != nil {
+		llmOverride = cfg.CV.LLMModel
+		embOverride = cfg.CV.EmbeddingModel
+	}
+	ollamaClient, err := processor.SelectModel(llmOverride, embOverride)
 	if err != nil {
 		slog.Error("no Ollama models available", "error", err)
 		return false
@@ -84,7 +96,7 @@ func processCV() bool {
 			EndChar:   c.EndChar,
 		}
 	}
-	if err := processor.GenerateEmbeddings(embChunks, ollamaClient.Model, ollamaClient.Host); err != nil {
+	if err := processor.GenerateEmbeddings(embChunks, ollamaClient); err != nil {
 		slog.Error("failed to generate embeddings", "error", err)
 		return false
 	}
@@ -224,11 +236,28 @@ func main() {
 	interval := pollInterval()
 	slog.Info("Huntr Processor Service — Starting", "poll_interval", interval)
 
+	// Graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigCh
+		slog.Info("received signal, shutting down", "signal", sig)
+		cancel()
+	}()
+
 	for {
 		slog.Info("poll cycle started")
 		processCV()
 		processJobs()
 		slog.Info("sleeping", "seconds", interval)
-		time.Sleep(time.Duration(interval) * time.Second)
+		select {
+		case <-ctx.Done():
+			slog.Info("shutting down")
+			return
+		case <-time.After(time.Duration(interval) * time.Second):
+		}
 	}
 }
