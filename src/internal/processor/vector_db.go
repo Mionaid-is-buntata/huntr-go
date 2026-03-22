@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	vectorDBPath   = "/chromadb"
+	vectorDBPath   = "/data/chromadb"
 	maxCollections = 2
 )
 

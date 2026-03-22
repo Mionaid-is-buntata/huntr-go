@@ -119,6 +119,7 @@ func AddSource(cfg *config.Config, name, url string, dynamic bool, group string,
 		URL:     url,
 		Dynamic: dynamic,
 		Enabled: true,
+		Group:   group,
 	}
 	cfg.JobSources = append(cfg.JobSources, newSource)
 	return AddSourceResult{Success: true, Message: fmt.Sprintf("Source %q added successfully", name), Source: &newSource}

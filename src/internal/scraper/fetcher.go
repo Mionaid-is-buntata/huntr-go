@@ -25,6 +25,8 @@ const (
 	DynamicRenderWait = 3 * time.Second
 	// MaxRedirects is the maximum number of HTTP redirects to follow.
 	MaxRedirects = 5
+	// MaxResponseBytes is the maximum HTTP response body size (10MB).
+	MaxResponseBytes = 10 << 20
 )
 
 // userAgents is rotated per-request to avoid detection.
@@ -125,7 +127,7 @@ func (f *Fetcher) FetchStatic(ctx context.Context, fetchURL string) (string, err
 			continue
 		}
 
-		body, readErr := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, MaxResponseBytes))
 		resp.Body.Close()
 		if readErr != nil {
 			lastErr = fmt.Errorf("scraper: read body: %w", readErr)

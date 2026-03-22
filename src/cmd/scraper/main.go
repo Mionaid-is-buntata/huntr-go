@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"syscall"
 	"time"
@@ -25,8 +24,8 @@ const (
 	logDir             = "/data/logs"
 	logFile            = "/data/logs/scraper.log"
 	triggerPollSeconds = 60
-	logMaxBytes        = 100_000
-	logMaxArchives     = 3
+	logMaxBytes    = 100_000
+	logMaxAge      = 24 * time.Hour
 )
 
 func pollInterval() int {
@@ -58,6 +57,14 @@ func main() {
 		slog.Info("received signal, shutting down", "signal", sig)
 		cancel()
 	}()
+
+	// Run initial scrape on startup
+	slog.Info("running initial scrape on startup")
+	runScrape(ctx)
+	if ctx.Err() != nil {
+		slog.Info("shutting down after initial scrape")
+		return
+	}
 
 	for {
 		// Check for trigger file
@@ -170,13 +177,10 @@ func rotateLog() {
 				archives = append(archives, archiveFile{e.Name(), info.ModTime()})
 			}
 		}
-		sort.Slice(archives, func(i, j int) bool {
-			return archives[i].mod.After(archives[j].mod)
-		})
-		for i := logMaxArchives; i < len(archives); i++ {
-			os.Remove(filepath.Join(archiveDir, archives[i].name))
+		for _, a := range archives {
+			if time.Since(a.mod) > logMaxAge {
+				os.Remove(filepath.Join(archiveDir, a.name))
+			}
 		}
-	} else {
-		os.Remove(logFile)
 	}
 }
