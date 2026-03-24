@@ -1607,6 +1607,7 @@
           <div id="sources-list">
             <p>Loading sources...</p>
           </div>
+          <div id="sources-test-results" style="margin-top: 15px"></div>
         </div>
 
         <div class="panel">
@@ -2768,7 +2769,7 @@
       }
 
       async function assessSourceParser(name, url, dynamic, btnElement) {
-        const testResultsDiv = document.getElementById("test-results");
+        const testResultsDiv = document.getElementById("sources-test-results") || document.getElementById("test-results");
         const origHtml = testResultsDiv ? testResultsDiv.innerHTML : '';
         if (testResultsDiv) {
           testResultsDiv.innerHTML = `
