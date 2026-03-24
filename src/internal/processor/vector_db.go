@@ -1,6 +1,7 @@
 package processor
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -116,7 +117,7 @@ func (v *VectorDB) StoreCVChunks(collectionName string, chunks []CVChunkWithEmbe
 		}
 	}
 
-	if err := col.AddDocuments(nil, docs, 1); err != nil {
+	if err := col.AddDocuments(context.Background(), docs, 1); err != nil {
 		return fmt.Errorf("store chunks: %w", err)
 	}
 
