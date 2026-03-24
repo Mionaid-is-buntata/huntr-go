@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -21,6 +22,7 @@ type Scraper struct {
 	Fetcher  PageFetcher
 	Pool     *URLPool
 	Errors   *ErrorReporter
+	Stats    *StatsRecorder
 	Config   *config.Config
 }
 
@@ -30,6 +32,7 @@ func New(cfg *config.Config) *Scraper {
 		Fetcher: NewFetcher(),
 		Pool:    NewURLPool(),
 		Errors:  NewErrorReporter(""),
+		Stats:   NewStatsRecorder(),
 		Config:  cfg,
 	}
 }
@@ -184,6 +187,13 @@ func (s *Scraper) collectFromSource(
 		jobsForSource = append(jobsForSource, jobs...)
 		slog.Info("collected jobs", "source", src.Name, "count", len(jobs))
 		break
+	}
+
+	// Record per-source stats
+	if len(jobsForSource) > 0 {
+		s.Stats.RecordSuccess(src.Name, len(jobsForSource))
+	} else {
+		s.Stats.RecordError(src.Name, fmt.Errorf("no jobs collected"))
 	}
 
 	// Fetch detail pages

@@ -29,6 +29,9 @@ const (
 	normDir    = "/data/jobs/normalised"
 	scoredDir  = "/data/jobs/scored"
 	processDir = "/data/cv/cv-processed"
+	logFilePath = "/data/logs/processor.log"
+	logMaxBytes = 100_000
+	logMaxAge   = 24 * time.Hour
 )
 
 func pollInterval() int {
@@ -141,6 +144,9 @@ func processCV() bool {
 	return true
 }
 
+// lastProcessedFile tracks the last raw file we processed so we don't re-score it.
+var lastProcessedFile string
+
 func processJobs() int {
 	cfg, err := config.Load(configPath)
 	if err != nil {
@@ -167,6 +173,12 @@ func processJobs() int {
 	}
 	sort.Sort(sort.Reverse(sort.StringSlice(rawFiles)))
 	latestFile := rawFiles[0]
+
+	// Skip if we already processed this file
+	if latestFile == lastProcessedFile {
+		slog.Debug("latest raw file already processed, skipping", "file", latestFile)
+		return 0
+	}
 
 	slog.Info("processing raw jobs", "file", latestFile)
 	data, err := os.ReadFile(latestFile)
@@ -228,11 +240,40 @@ func processJobs() int {
 	}
 	slog.Info("scored jobs written", "file", scoredFile, "count", len(scored))
 
+	lastProcessedFile = latestFile
 	return 0
 }
 
+func rotateLog() {
+	info, err := os.Stat(logFilePath)
+	if err != nil {
+		return
+	}
+	if info.Size() <= logMaxBytes {
+		return
+	}
+
+	archiveDir := filepath.Join(filepath.Dir(logFilePath), "archive")
+	os.MkdirAll(archiveDir, 0755)
+
+	ts := time.Now().Format("20060102_150405")
+	archivePath := filepath.Join(archiveDir, fmt.Sprintf("processor_%s.log", ts))
+	os.Rename(logFilePath, archivePath)
+	slog.Info("archived log", "path", archivePath, "size", info.Size())
+
+	entries, _ := os.ReadDir(archiveDir)
+	for _, e := range entries {
+		if eInfo, err := e.Info(); err == nil && time.Since(eInfo.ModTime()) > logMaxAge {
+			os.Remove(filepath.Join(archiveDir, e.Name()))
+		}
+	}
+}
+
 func main() {
-	common.SetupLogger("processor", os.Getenv("LOG_LEVEL"), nil)
+	_, logFileHandle := common.SetupLoggerWithFile("processor", os.Getenv("LOG_LEVEL"), logFilePath)
+	if logFileHandle != nil {
+		defer logFileHandle.Close()
+	}
 	interval := pollInterval()
 	slog.Info("Huntr Processor Service — Starting", "poll_interval", interval)
 
@@ -249,6 +290,8 @@ func main() {
 	}()
 
 	for {
+		rotateLog()
+		common.TouchHeartbeat("processor")
 		slog.Info("poll cycle started")
 		processCV()
 		processJobs()

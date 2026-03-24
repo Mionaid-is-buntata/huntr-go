@@ -27,8 +27,7 @@ var SourcesWithParsers = map[string]bool{
 // SourceWithParser extends config.Source with parser availability info.
 type SourceWithParser struct {
 	config.Source
-	HasParser bool   `json:"has_parser"`
-	Group     string `json:"group,omitempty"`
+	HasParser bool `json:"has_parser"`
 }
 
 // normaliseSourceName lowercases and strips hyphens/spaces for parser lookup.

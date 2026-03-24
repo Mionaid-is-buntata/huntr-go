@@ -1352,10 +1352,27 @@
                 <td colspan="6">
                   <div class="empty-state">
                     <div class="empty-state-icon">📭</div>
+                    {{if eq .PipelineStatus "awaiting_scoring"}}
+                    <div class="empty-state-message">Jobs normalised, scoring pending</div>
+                    <div class="empty-state-hint">
+                      Jobs have been normalised but scoring has not completed yet. The processor will score them shortly.
+                    </div>
+                    {{else if eq .PipelineStatus "awaiting_processing"}}
+                    <div class="empty-state-message">Jobs scraped, processing pending</div>
+                    <div class="empty-state-hint">
+                      Raw jobs have been scraped but not yet processed. The processor checks every 60 seconds.
+                    </div>
+                    {{else if eq .PipelineStatus "no_scrape"}}
+                    <div class="empty-state-message">No scrape has run yet</div>
+                    <div class="empty-state-hint">
+                      Trigger a manual scrape using the button above, or wait for the next scheduled run.
+                    </div>
+                    {{else}}
                     <div class="empty-state-message">No jobs available</div>
                     <div class="empty-state-hint">
                       Jobs will appear here after the next aggregation cycle.
                     </div>
+                    {{end}}
                   </div>
                 </td>
               </tr>
@@ -1616,6 +1633,18 @@
               />
             </div>
             <div class="form-group">
+              <label for="source-group">Category:</label>
+              <select id="source-group" name="group" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 4px;">
+                <option value="general-job-boards">General Job Boards</option>
+                <option value="uk-remote-boards">UK Remote & Flexible Work Boards</option>
+                <option value="tech-specialist-agencies">Tech-Specialist Recruitment Agencies</option>
+                <option value="tech-platforms">Broad & Vertical Job Platforms</option>
+                <option value="developer-first">Developer-First / Recruiter-Led Platforms</option>
+                <option value="uk-tech-agencies">UK Tech Recruitment Agencies (Senior-Focused)</option>
+                <option value="general" selected>General</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label>
                 <input type="checkbox" id="source-dynamic" name="dynamic" />
                 Requires JavaScript (Dynamic Content)
@@ -1735,6 +1764,17 @@
 
     <script>
       // Source group definitions (must be before loadSources)
+      function timeAgo(isoString) {
+        const diff = Date.now() - new Date(isoString).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return mins + 'm ago';
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return hrs + 'h ago';
+        const days = Math.floor(hrs / 24);
+        return days + 'd ago';
+      }
+
       const SOURCE_GROUPS = {
         'general-job-boards': { name: 'General Job Boards', order: 1 },
         'uk-remote-boards': { name: 'UK Remote & Flexible Work Boards', order: 2 },
@@ -2428,6 +2468,16 @@
 
           const data = await response.json();
 
+          // Fetch per-source stats in parallel
+          let sourceStats = {};
+          try {
+            const statsResp = await fetch("/api/sources/stats");
+            if (statsResp.ok) {
+              const statsData = await statsResp.json();
+              sourceStats = statsData.stats || {};
+            }
+          } catch (_) {}
+
           if (data.sources && data.sources.length > 0) {
             // Group sources by their group property
             const grouped = {};
@@ -2476,12 +2526,23 @@
                 const parserStatus = source.has_parser ? 'has-parser' : 'no-parser';
                 const parserLabel = source.has_parser ? 'Parser' : 'Generic';
                 const safeName = source.name.replace(/'/g, "\\'");
+                const stats = sourceStats[source.name] || {};
+                let activityHtml = '';
+                if (stats.last_scrape_at) {
+                  const ago = timeAgo(stats.last_scrape_at);
+                  const statusDot = stats.last_status === 'error'
+                    ? '<span style="color: var(--error); font-weight: bold;" title="Last scrape failed">●</span>'
+                    : stats.last_status === 'success'
+                    ? '<span style="color: var(--success);" title="Last scrape succeeded">●</span>'
+                    : '<span style="color: var(--warning);" title="Partial results">●</span>';
+                  activityHtml = `<span style="font-size: 0.75em; color: var(--light-coffee); margin-left: 8px;">${statusDot} ${stats.jobs_found || 0} jobs ${ago}</span>`;
+                }
                 html += `
                   <div class="source-item" data-source-name="${source.name.replace(/"/g, '&quot;')}" data-source-url="${(source.url || '').replace(/"/g, '&quot;')}" data-source-dynamic="${source.dynamic || false}">
                     <input type="checkbox" ${source.enabled ? "checked" : ""}
                            onchange="toggleSource('${safeName}', this.checked)"
                            title="Enable/disable ${source.name}">
-                    <span class="source-item-name">${source.name}</span>
+                    <span class="source-item-name">${source.name}${activityHtml}</span>
                     <div class="source-item-actions">
                       <span class="source-item-status ${parserStatus}">${parserLabel}</span>
                       <button class="btn btn-secondary btn-small" style="padding: 3px 8px; font-size: 0.75em;"
@@ -2863,6 +2924,7 @@
             name: document.getElementById("source-name").value.trim(),
             url: document.getElementById("source-url").value.trim(),
             dynamic: document.getElementById("source-dynamic").checked,
+            group: document.getElementById("source-group").value,
           };
 
           // Validation

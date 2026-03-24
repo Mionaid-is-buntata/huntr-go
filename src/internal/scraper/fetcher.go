@@ -8,10 +8,15 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/go-rod/rod"
+	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 )
 
 const (
@@ -65,6 +70,8 @@ type Fetcher struct {
 	cooldowns  map[string]time.Time // domain -> cooldown-until
 	cooldownMu sync.RWMutex
 	uaIndex    atomic.Int64
+	browser    *rod.Browser
+	browserMu  sync.Mutex
 }
 
 // NewFetcher creates a new Fetcher with an HTTP client.
@@ -162,18 +169,125 @@ func (f *Fetcher) FetchStatic(ctx context.Context, fetchURL string) (string, err
 	return "", lastErr
 }
 
+// ensureBrowser lazily starts the rod headless Chrome browser.
+func (f *Fetcher) ensureBrowser() (*rod.Browser, error) {
+	f.browserMu.Lock()
+	defer f.browserMu.Unlock()
+
+	if f.browser != nil {
+		return f.browser, nil
+	}
+
+	// Use system Chromium if CHROMIUM_PATH is set (Docker), otherwise auto-download
+	chromiumPath := os.Getenv("CHROMIUM_PATH")
+	var wsURL string
+	var err error
+
+	l := launcher.New()
+	if chromiumPath != "" {
+		l = l.Bin(chromiumPath)
+	}
+
+	profileDir := os.Getenv("HUNTR_BROWSER_PROFILE_DIR")
+	if profileDir != "" {
+		l = l.UserDataDir(profileDir)
+	}
+
+	wsURL, err = l.
+		Headless(true).
+		Set("disable-gpu").
+		Set("no-sandbox").
+		Set("disable-dev-shm-usage").
+		Set("disable-extensions").
+		Set("disable-background-networking").
+		Set("disable-sync").
+		Set("disable-translate").
+		Set("host-resolver-rules", GoogleHostResolverRules()).
+		Launch()
+	if err != nil {
+		return nil, fmt.Errorf("scraper: launch browser: %w", err)
+	}
+
+	browser := rod.New().ControlURL(wsURL)
+	if err := browser.Connect(); err != nil {
+		return nil, fmt.Errorf("scraper: connect browser: %w", err)
+	}
+
+	f.browser = browser
+	slog.Info("headless browser started")
+	return f.browser, nil
+}
+
 // FetchDynamic fetches a page using rod headless Chrome with JS rendering.
 // Rod browser is lazily initialised on first call.
 func (f *Fetcher) FetchDynamic(ctx context.Context, fetchURL string) (string, error) {
-	// TODO: Implement rod-based dynamic fetching in Phase 4/5 integration.
-	// For now, fall back to static fetch with a warning.
-	slog.Warn("dynamic fetch not yet implemented, falling back to static", "url", fetchURL)
-	return f.FetchStatic(ctx, fetchURL)
+	domain := getDomain(fetchURL)
+
+	// Check cooldown
+	f.cooldownMu.RLock()
+	if until, ok := f.cooldowns[domain]; ok && time.Now().Before(until) {
+		remaining := time.Until(until).Truncate(time.Minute)
+		f.cooldownMu.RUnlock()
+		return "", fmt.Errorf("domain %s in cooldown for %v", domain, remaining)
+	}
+	f.cooldownMu.RUnlock()
+
+	browser, err := f.ensureBrowser()
+	if err != nil {
+		slog.Warn("browser launch failed, falling back to static", "error", err)
+		return f.FetchStatic(ctx, fetchURL)
+	}
+
+	// Pick a user agent for this request
+	idx := f.uaIndex.Add(1)
+	ua := userAgents[int(idx)%len(userAgents)]
+
+	page, err := browser.Page(proto.TargetCreateTarget{URL: "about:blank"})
+	if err != nil {
+		return "", fmt.Errorf("scraper: create page: %w", err)
+	}
+	defer page.Close()
+
+	// Set user agent and extra headers
+	_ = page.SetUserAgent(&proto.NetworkSetUserAgentOverride{UserAgent: ua})
+	_, _ = page.SetExtraHeaders([]string{"Accept-Language", "en-US,en;q=0.9"})
+
+	// Navigate with timeout
+	pageTimeout := RequestTimeout + DynamicRenderWait
+	err = rod.Try(func() {
+		page.Timeout(pageTimeout).MustNavigate(fetchURL).MustWaitStable()
+	})
+	if err != nil {
+		// Check if we got a 403-like block (common with JS sites)
+		return "", fmt.Errorf("scraper: dynamic fetch %s: %w", fetchURL, err)
+	}
+
+	// Extra wait for JS rendering to complete
+	time.Sleep(DynamicRenderWait)
+
+	// Get rendered HTML
+	html, err := page.HTML()
+	if err != nil {
+		return "", fmt.Errorf("scraper: get page HTML: %w", err)
+	}
+
+	if len(html) == 0 {
+		return "", fmt.Errorf("scraper: empty page from %s", fetchURL)
+	}
+
+	slog.Debug("dynamic fetched page", "url", fetchURL, "bytes", len(html))
+	return html, nil
 }
 
 // Close cleans up any open browser instances.
 func (f *Fetcher) Close() {
-	// TODO: Close rod browser when implemented.
+	f.browserMu.Lock()
+	defer f.browserMu.Unlock()
+	if f.browser != nil {
+		_ = f.browser.Close()
+		f.browser = nil
+		slog.Info("headless browser closed")
+	}
 }
 
 // IsDomainCooledDown checks if a domain is in cooldown.

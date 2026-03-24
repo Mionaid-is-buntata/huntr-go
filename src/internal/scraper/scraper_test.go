@@ -67,6 +67,7 @@ func TestCollectJobs_WithMockFetcher(t *testing.T) {
 		Fetcher: mf,
 		Pool:    NewURLPool(),
 		Errors:  NewErrorReporter("/dev/null"),
+		Stats:   NewStatsRecorder(),
 		Config:  cfg,
 	}
 
@@ -115,6 +116,7 @@ func TestCollectJobs_FiltersApplied(t *testing.T) {
 		Fetcher: mf,
 		Pool:    NewURLPool(),
 		Errors:  NewErrorReporter("/dev/null"),
+		Stats:   NewStatsRecorder(),
 		Config:  cfg,
 	}
 
@@ -138,6 +140,7 @@ func TestCollectJobs_NoEnabledSources(t *testing.T) {
 		Fetcher: &mockFetcher{},
 		Pool:    NewURLPool(),
 		Errors:  NewErrorReporter("/dev/null"),
+		Stats:   NewStatsRecorder(),
 		Config:  cfg,
 	}
 
@@ -161,6 +164,7 @@ func TestCollectJobs_ContextCancellation(t *testing.T) {
 		Fetcher: &mockFetcher{},
 		Pool:    NewURLPool(),
 		Errors:  NewErrorReporter("/dev/null"),
+		Stats:   NewStatsRecorder(),
 		Config:  cfg,
 	}
 

@@ -12,7 +12,8 @@ services:
       - SCRAPER_POLL_INTERVAL=1800
       - LOG_LEVEL=info
     healthcheck:
-      test: ["CMD", "pgrep", "huntr-scraper"]  # TODO: replace with /health HTTP endpoint
+      # TODO: replace with /health HTTP endpoint
+      test: ["CMD", "pgrep", "huntr-scraper"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -39,7 +40,8 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: ["CMD", "pgrep", "huntr-processor"]  # TODO: replace with /health HTTP endpoint
+      # TODO: replace with /health HTTP endpoint
+      test: ["CMD", "pgrep", "huntr-processor"]
       interval: 30s
       timeout: 10s
       retries: 3

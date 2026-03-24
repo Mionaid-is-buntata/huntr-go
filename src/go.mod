@@ -3,18 +3,18 @@ module github.com/campbell/huntr-ai
 go 1.25.8
 
 require (
+	github.com/PuerkitoBio/goquery v1.12.0
 	github.com/go-chi/chi/v5 v5.2.5
+	github.com/go-rod/rod v0.116.2
 	github.com/philippgille/chromem-go v0.7.0
 	github.com/shirou/gopsutil/v4 v4.26.2
 	golang.org/x/net v0.52.0
 )
 
 require (
-	github.com/PuerkitoBio/goquery v1.12.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-rod/rod v0.116.2 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect

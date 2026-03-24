@@ -1,6 +1,8 @@
 package web
 
 import (
+	"archive/zip"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -77,6 +79,7 @@ func NewServer(paths DataPaths) *Server {
 		r.Delete("/sources", s.handleSourcesDelete)
 		r.Post("/sources/test", s.handleSourcesTest)
 		r.Post("/sources/board/toggle", s.handleBoardToggle)
+		r.Get("/sources/stats", s.handleSourceStats)
 
 		r.Get("/collections", s.handleCollectionsGet)
 		r.Put("/collections", s.handleCollectionsPut)
@@ -139,6 +142,31 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]string{"status": "ok", "service": "huntr-web"})
 }
 
+// detectPipelineStatus checks what stage the job pipeline has reached.
+func (s *Server) detectPipelineStatus() string {
+	if hasFiles(s.Paths.NormalisedDir) {
+		return "awaiting_scoring"
+	}
+	if hasFiles(s.Paths.RawDir) {
+		return "awaiting_processing"
+	}
+	return "no_scrape"
+}
+
+// hasFiles returns true if a directory contains at least one regular file.
+func hasFiles(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	emptyCtx := DashboardContext{
 		Jobs:           []FormattedJob{},
@@ -149,6 +177,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	scoredDir := s.Paths.ScoredDir
 	entries, err := os.ReadDir(scoredDir)
 	if err != nil || len(entries) == 0 {
+		emptyCtx.PipelineStatus = s.detectPipelineStatus()
 		s.renderDashboard(w, emptyCtx)
 		return
 	}
@@ -161,7 +190,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if len(scoredFiles) == 0 {
-		emptyCtx.LastUpdated = "No jobs available"
+		emptyCtx.PipelineStatus = s.detectPipelineStatus()
 		s.renderDashboard(w, emptyCtx)
 		return
 	}
@@ -236,7 +265,10 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCVUpload(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(maxUploadBytes)
+	if err := r.ParseMultipartForm(maxUploadBytes); err != nil {
+		writeJSON(w, 400, map[string]string{"error": "File too large or invalid form data"})
+		return
+	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		writeJSON(w, 400, map[string]string{"error": "No file provided"})
@@ -263,8 +295,25 @@ func (s *Server) handleCVUpload(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 500, map[string]string{"error": "Could not read file"})
 		return
 	}
-	if len(data) < 4 || data[0] != 0x50 || data[1] != 0x4B || data[2] != 0x03 || data[3] != 0x04 {
+	if len(data) < 4 || data[0] != 0x50 || data[1] != 0x4B {
 		writeJSON(w, 400, map[string]string{"error": "Invalid file content. File does not appear to be a valid .docx"})
+		return
+	}
+	// Verify the ZIP actually contains OOXML content (Content_Types marker)
+	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		writeJSON(w, 400, map[string]string{"error": "Invalid file content. File is not a valid ZIP/DOCX archive"})
+		return
+	}
+	hasContentTypes := false
+	for _, f := range zr.File {
+		if f.Name == "[Content_Types].xml" {
+			hasContentTypes = true
+			break
+		}
+	}
+	if !hasContentTypes {
+		writeJSON(w, 400, map[string]string{"error": "Invalid file content. File is a ZIP archive but not a valid .docx document"})
 		return
 	}
 
@@ -573,6 +622,20 @@ func (s *Server) handleBoardToggle(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, map[string]interface{}{"success": true, "affected_count": affected})
 }
 
+func (s *Server) handleSourceStats(w http.ResponseWriter, r *http.Request) {
+	data, err := os.ReadFile("/data/state/source_stats.json")
+	if err != nil {
+		writeJSON(w, 200, map[string]interface{}{"stats": map[string]interface{}{}})
+		return
+	}
+	var stats map[string]interface{}
+	if err := json.Unmarshal(data, &stats); err != nil {
+		writeJSON(w, 200, map[string]interface{}{"stats": map[string]interface{}{}})
+		return
+	}
+	writeJSON(w, 200, map[string]interface{}{"stats": stats})
+}
+
 func (s *Server) handleCollectionsGet(w http.ResponseWriter, r *http.Request) {
 	cfg, _ := s.loadConfig()
 	collections := GetCollections(cfg)
@@ -604,6 +667,12 @@ func (s *Server) handleCollectionsDelete(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if DeleteCollection(name) {
+		// Clear active collection if it was the deleted one
+		cfg, _ := s.loadConfig()
+		if cfg != nil && cfg.CV.VectorDB.ActiveCollection == name {
+			cfg.CV.VectorDB.ActiveCollection = ""
+			config.Save(s.ConfigPath, cfg)
+		}
 		writeJSON(w, 200, map[string]string{"status": "success", "message": "Collection \"" + name + "\" deleted"})
 	} else {
 		writeJSON(w, 500, map[string]string{"error": "Failed to delete collection \"" + name + "\""})

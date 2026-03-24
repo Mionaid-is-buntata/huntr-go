@@ -68,8 +68,9 @@ type ChunkConfig struct {
 
 // VectorConfig defines vector database settings.
 type VectorConfig struct {
-	MaxCollections int  `json:"max_collections"`
-	AutoRotate     bool `json:"auto_rotate"`
+	MaxCollections   int    `json:"max_collections"`
+	AutoRotate       bool   `json:"auto_rotate"`
+	ActiveCollection string `json:"active_collection,omitempty"`
 }
 
 // EmailConfig holds SMTP connection settings.
@@ -86,12 +87,12 @@ var (
 func Default() *Config {
 	return &Config{
 		JobSources: []Source{
-			{Name: "Reed", URL: "https://www.reed.co.uk/jobs/software-developer-jobs-in-london?remote=true", Enabled: true},
-			{Name: "Indeed", URL: "https://uk.indeed.com/jobs?q=Python+Developer+Remote&l=United+Kingdom", Enabled: true},
-			{Name: "Adzuna", URL: "https://www.adzuna.co.uk/jobs/search?q=python+developer+remote", Enabled: true},
-			{Name: "Technojobs", URL: "https://www.technojobs.co.uk/jobs/python", Enabled: true},
-			{Name: "CV-Library", URL: "https://www.cv-library.co.uk/jobs/python-developer/remote", Enabled: true},
-			{Name: "Totaljobs", URL: "https://www.totaljobs.com/jobs/python-developer/in-united-kingdom?remote=true", Enabled: true},
+			{Name: "Reed", URL: "https://www.reed.co.uk/jobs/software-developer-jobs-in-london?remote=true", Enabled: true, Group: "general-job-boards"},
+			{Name: "Indeed", URL: "https://uk.indeed.com/jobs?q=Python+Developer+Remote&l=United+Kingdom", Enabled: true, Group: "general-job-boards"},
+			{Name: "Adzuna", URL: "https://www.adzuna.co.uk/jobs/search?q=python+developer+remote", Enabled: true, Group: "general-job-boards"},
+			{Name: "Technojobs", URL: "https://www.technojobs.co.uk/jobs/python", Enabled: true, Group: "tech-specialist-agencies"},
+			{Name: "CV-Library", URL: "https://www.cv-library.co.uk/jobs/python-developer/remote", Enabled: true, Group: "general-job-boards"},
+			{Name: "Totaljobs", URL: "https://www.totaljobs.com/jobs/python-developer/in-united-kingdom?remote=true", Enabled: true, Group: "general-job-boards"},
 		},
 		Preferences: Preferences{
 			TechStackKeywords: []string{"Python", "Full Stack", "Django", "Flask", "React", "APIs", "Microservices", "AWS", "Docker"},

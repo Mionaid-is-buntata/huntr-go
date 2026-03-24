@@ -38,7 +38,10 @@ func pollInterval() int {
 }
 
 func main() {
-	common.SetupLogger("scraper", os.Getenv("LOG_LEVEL"), nil)
+	_, logFileHandle := common.SetupLoggerWithFile("scraper", os.Getenv("LOG_LEVEL"), logFile)
+	if logFileHandle != nil {
+		defer logFileHandle.Close()
+	}
 	interval := pollInterval()
 	slog.Info("Huntr Scraper Service — Starting",
 		"poll_interval_s", interval, "poll_interval_m", interval/60)
@@ -110,6 +113,7 @@ func main() {
 
 func runScrape(ctx context.Context) {
 	rotateLog()
+	common.TouchHeartbeat("scraper")
 
 	slog.Info("============================================================")
 	slog.Info("Huntr Scraper Service — Starting job collection")

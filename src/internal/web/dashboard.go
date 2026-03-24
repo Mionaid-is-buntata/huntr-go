@@ -15,6 +15,7 @@ type DashboardContext struct {
 	LowestScore    float64        `json:"lowest_score"`
 	LastUpdated    string         `json:"last_updated"`
 	LastScrapeTime string         `json:"last_scrape_time"`
+	PipelineStatus string         `json:"pipeline_status"`
 }
 
 // FormattedJob holds a job formatted for display.

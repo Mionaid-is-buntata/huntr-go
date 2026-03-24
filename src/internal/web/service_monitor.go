@@ -58,8 +58,15 @@ func CheckServiceStatus(name, logFile, dataDir string, extraDirs []string) Servi
 		candidates = append(candidates, t)
 	}
 	for _, d := range extraDirs {
-		if t, ok := latestMtimeInDir(d); ok {
-			candidates = append(candidates, t)
+		// Support both files and directories as extra paths
+		if info, err := os.Stat(d); err == nil {
+			if info.IsDir() {
+				if t, ok := latestMtimeInDir(d); ok {
+					candidates = append(candidates, t)
+				}
+			} else {
+				candidates = append(candidates, info.ModTime())
+			}
 		}
 	}
 
@@ -98,8 +105,8 @@ func GetAllServiceStatus() map[string]ServiceStatus {
 		log, data string
 		extra     []string
 	}{
-		"scraper":   {"/data/logs/scraper.log", "/data/jobs/raw", nil},
-		"processor": {"/data/logs/processor.log", "/data/jobs/scored", []string{"/data/jobs/raw"}},
+		"scraper":   {"/data/logs/scraper.log", "/data/jobs/raw", []string{"/data/state/scraper_heartbeat"}},
+		"processor": {"/data/logs/processor.log", "/data/jobs/scored", []string{"/data/jobs/raw", "/data/state/processor_heartbeat"}},
 		"web":       {"/data/logs/web.log", "/data/dashboards", nil},
 	}
 
