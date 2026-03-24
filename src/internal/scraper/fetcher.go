@@ -188,11 +188,8 @@ func (f *Fetcher) ensureBrowser() (*rod.Browser, error) {
 		l = l.Bin(chromiumPath)
 	}
 
-	profileDir := os.Getenv("HUNTR_BROWSER_PROFILE_DIR")
-	if profileDir != "" {
-		l = l.UserDataDir(profileDir)
-	}
-
+	// Use a fresh temp profile to avoid stale lock files from previous runs.
+	// We don't need cookies/cache to persist across scrape cycles.
 	wsURL, err = l.
 		Headless(true).
 		Set("disable-gpu").
