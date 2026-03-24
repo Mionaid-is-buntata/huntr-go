@@ -1,7 +1,35 @@
-# IDE (root level)
-.vscode/
+# Environment & secrets
+.env
+.env.*
+!.env.example
 
-# Python build artifacts
+# Claude Code
+.claude/
+
+# IDE
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node / Playwright (test tooling)
+node_modules/
+package.json
+package-lock.json
+playwright.config.ts
+tests/
+test-results/
+
+# Go build artifacts
+src/processor
+*.exe
+*.test
+*.out
+
+# Python build artifacts (legacy)
 __pycache__/
 *.py[cod]
 *.pyo
@@ -11,8 +39,7 @@ dist/
 build/
 .eggs/
 
-# Environment
-.env
-
-# OS
-.DS_Store
+# State files (session-specific, not deployable)
+state/progress.json
+state/session-resume.md
+state/decisions.md
