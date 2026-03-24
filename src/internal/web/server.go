@@ -1,8 +1,6 @@
 package web
 
 import (
-	"archive/zip"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -290,36 +288,25 @@ func (s *Server) handleCVUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read entire file, then validate DOCX magic bytes (PK zip header: 50 4B 03 04)
+	// Read entire file content
 	data, err := io.ReadAll(file)
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": "Could not read file"})
 		return
 	}
-	slog.Info("CV upload file read", "filename", header.Filename, "size", len(data), "headerSize", header.Size)
-	if len(data) >= 4 {
-		slog.Info("CV upload magic bytes", "bytes", fmt.Sprintf("%02x %02x %02x %02x", data[0], data[1], data[2], data[3]))
-	}
-	if len(data) < 4 || data[0] != 0x50 || data[1] != 0x4B {
-		writeJSON(w, 400, map[string]string{"error": "Invalid file content. File does not appear to be a valid .docx"})
+	if len(data) == 0 {
+		writeJSON(w, 400, map[string]string{"error": "File is empty"})
 		return
 	}
-	// Verify the ZIP actually contains OOXML content (Content_Types marker)
-	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
-	if err != nil {
-		writeJSON(w, 400, map[string]string{"error": "Invalid file content. File is not a valid ZIP/DOCX archive"})
-		return
-	}
-	hasContentTypes := false
-	for _, f := range zr.File {
-		if f.Name == "[Content_Types].xml" {
-			hasContentTypes = true
-			break
-		}
-	}
-	if !hasContentTypes {
-		writeJSON(w, 400, map[string]string{"error": "Invalid file content. File is a ZIP archive but not a valid .docx document"})
-		return
+
+	// Log format info — the processor handles format detection and fallback
+	isZip := len(data) >= 4 && data[0] == 0x50 && data[1] == 0x4B
+	if isZip {
+		slog.Info("CV upload received", "filename", header.Filename, "size", len(data), "format", "docx/zip")
+	} else {
+		slog.Warn("CV upload: file is not a ZIP/DOCX, processor will attempt plain text fallback",
+			"filename", header.Filename, "size", len(data),
+			"magic", fmt.Sprintf("%02x %02x %02x %02x", data[0], data[1], data[2], data[3]))
 	}
 
 	os.MkdirAll(s.Paths.CVUploadDir, 0755)
