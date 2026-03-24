@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"io/fs"
@@ -294,6 +295,10 @@ func (s *Server) handleCVUpload(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeJSON(w, 500, map[string]string{"error": "Could not read file"})
 		return
+	}
+	slog.Info("CV upload file read", "filename", header.Filename, "size", len(data), "headerSize", header.Size)
+	if len(data) >= 4 {
+		slog.Info("CV upload magic bytes", "bytes", fmt.Sprintf("%02x %02x %02x %02x", data[0], data[1], data[2], data[3]))
 	}
 	if len(data) < 4 || data[0] != 0x50 || data[1] != 0x4B {
 		writeJSON(w, 400, map[string]string{"error": "Invalid file content. File does not appear to be a valid .docx"})
