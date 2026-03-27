@@ -29,6 +29,13 @@ type Job struct {
 type ScoreBreakdown struct {
 	TechStackMatches int  `json:"tech_stack_matches"`
 	TechStackScore   int  `json:"tech_stack_score"`
+	PrimaryMatches   int  `json:"primary_matches,omitempty"`
+	PrimaryScore     int  `json:"primary_score,omitempty"`
+	SecondaryMatches int  `json:"secondary_matches,omitempty"`
+	SecondaryScore   int  `json:"secondary_score,omitempty"`
+	AdjacentMatches  int  `json:"adjacent_matches,omitempty"`
+	AdjacentScore    int  `json:"adjacent_score,omitempty"`
+	ExcludedPenalty  int  `json:"excluded_penalty,omitempty"`
 	DomainMatches    int  `json:"domain_matches"`
 	DomainScore      int  `json:"domain_score"`
 	LocationMatch    bool `json:"location_match"`

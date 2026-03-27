@@ -68,7 +68,7 @@ func (s *Scraper) CollectJobs(ctx context.Context, fetchDetails bool) []models.J
 			break
 		}
 
-		jobs := s.collectFromSource(ctx, src, minSalary, locations, workTypes, fetchDetails)
+		jobs := s.collectFromSource(ctx, src, prefs, minSalary, locations, workTypes, fetchDetails)
 		allJobs = append(allJobs, jobs...)
 
 		// Rate limit between sources
@@ -76,7 +76,8 @@ func (s *Scraper) CollectJobs(ctx context.Context, fetchDetails bool) []models.J
 		select {
 		case <-time.After(time.Duration(delay * float64(time.Second))):
 		case <-ctx.Done():
-			break
+			slog.Info("context cancelled during source cooldown")
+			return allJobs
 		}
 	}
 
@@ -87,6 +88,7 @@ func (s *Scraper) CollectJobs(ctx context.Context, fetchDetails bool) []models.J
 func (s *Scraper) collectFromSource(
 	ctx context.Context,
 	src config.Source,
+	prefs config.Preferences,
 	minSalary int,
 	locations, workTypes []string,
 	fetchDetails bool,
@@ -134,8 +136,10 @@ func (s *Scraper) collectFromSource(
 		}
 		tried[currentURL] = true
 
-		// Build search URL with keywords
-		searchURL := BuildSearchURL(currentURL, sourceName, src.Keywords)
+		// Build search URL with source-specific keywords. If source keywords are
+		// not explicitly configured, derive broad rotating terms from role profile.
+		searchKeywords := sourceKeywordsForSearch(src, prefs, sourceName)
+		searchURL := BuildSearchURL(currentURL, sourceName, searchKeywords)
 		slog.Info("fetching source", "source", src.Name,
 			"url", searchURL, "rotation", rotation+1, "max", maxRotations)
 
@@ -268,4 +272,32 @@ func enabledSources(cfg *config.Config) []config.Source {
 		}
 	}
 	return enabled
+}
+
+func sourceKeywordsForSearch(src config.Source, prefs config.Preferences, sourceName string) []string {
+	if len(src.Keywords) > 0 {
+		return src.Keywords
+	}
+	roleProfile := prefs.EffectiveRoleProfile()
+	terms := roleProfile.QueryTerms
+	if len(terms) == 0 {
+		terms = append(terms, roleProfile.PrimarySkills.Keywords...)
+		terms = append(terms, roleProfile.SecondarySkills.Keywords...)
+	}
+	if len(terms) == 0 {
+		return nil
+	}
+	return rotatedKeywords(terms, sourceName, 3)
+}
+
+func rotatedKeywords(terms []string, sourceName string, take int) []string {
+	if len(terms) == 0 || take <= 0 {
+		return nil
+	}
+	offset := (time.Now().YearDay() + len(sourceName)) % len(terms)
+	out := make([]string, 0, min(take, len(terms)))
+	for i := 0; i < take && i < len(terms); i++ {
+		out = append(out, terms[(offset+i)%len(terms)])
+	}
+	return out
 }

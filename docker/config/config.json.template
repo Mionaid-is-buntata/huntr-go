@@ -8,43 +8,43 @@
     },
     {
       "name": "Indeed",
-      "url": "https://uk.indeed.com/jobs?q=Python+Developer+Remote&l=United+Kingdom",
+      "url": "https://uk.indeed.com/jobs?q=Software+Engineer+Remote&l=United+Kingdom",
       "dynamic": false,
       "enabled": true
     },
     {
       "name": "Adzuna",
-      "url": "https://www.adzuna.co.uk/jobs/search?q=python+developer+remote",
+      "url": "https://www.adzuna.co.uk/jobs/search?q=software+engineer+remote",
       "dynamic": false,
       "enabled": true
     },
     {
       "name": "Technojobs",
-      "url": "https://www.technojobs.co.uk/jobs/python",
+      "url": "https://www.technojobs.co.uk/jobs/software-engineer",
       "dynamic": false,
       "enabled": true
     },
     {
       "name": "CV-Library",
-      "url": "https://www.cv-library.co.uk/jobs/python-developer/remote",
+      "url": "https://www.cv-library.co.uk/jobs/software-engineer/remote",
       "dynamic": false,
       "enabled": true
     },
     {
       "name": "Totaljobs",
-      "url": "https://www.totaljobs.com/jobs/python-developer/in-united-kingdom?remote=true",
+      "url": "https://www.totaljobs.com/jobs/software-engineer/in-united-kingdom?remote=true",
       "dynamic": false,
       "enabled": true
     },
     {
       "name": "LinkedIn",
-      "url": "https://www.linkedin.com/jobs/search/?keywords=Python%20Developer%20Remote&location=United%20Kingdom",
+      "url": "https://www.linkedin.com/jobs/search/?keywords=Software%20Engineer%20Remote&location=United%20Kingdom",
       "dynamic": true,
       "enabled": false
     },
     {
       "name": "Glassdoor",
-      "url": "https://www.glassdoor.co.uk/Job/python-developer-remote-jobs-SRCH_KO0,23.htm",
+      "url": "https://www.glassdoor.co.uk/Job/software-engineer-remote-jobs-SRCH_KO0,24.htm",
       "dynamic": false,
       "enabled": false
     },
@@ -62,11 +62,37 @@
     }
   ],
   "preferences": {
-    "tech_stack_keywords": ["Python", "Full Stack", "Django", "Flask", "React", "APIs", "Microservices", "AWS", "Docker"],
+    "tech_stack_keywords": ["Go", "Platform", "Infrastructure", "DevOps", "Cloud", "Kubernetes", "Docker", "APIs", "Microservices"],
     "domain_keywords": ["FinTech", "E-commerce", "SaaS", "Transport", "Payments", "Healthcare"],
     "locations": ["Remote", "100% Remote", "Hybrid", "London", "Manchester", "UK", "Europe"],
     "min_salary": 100000,
-    "work_type": ["100% Remote", "Hybrid"]
+    "work_type": ["100% Remote", "Hybrid"],
+    "role_profile": {
+      "primary_skills": {
+        "keywords": ["Go", "Golang", "Platform Engineering", "Infrastructure", "DevOps"],
+        "weight": 18,
+        "cap": 3
+      },
+      "secondary_skills": {
+        "keywords": ["Kubernetes", "Terraform", "AWS", "GCP", "CI/CD", "Observability", "SRE"],
+        "weight": 10,
+        "cap": 4
+      },
+      "adjacent_skills": {
+        "keywords": ["Python", "React", "TypeScript", "Data Engineering", "Security"],
+        "weight": 4,
+        "cap": 4
+      },
+      "excluded_skills": ["Senior Python Developer", "Django-only"],
+      "query_terms": [
+        "Go developer remote",
+        "Platform engineer remote",
+        "DevOps engineer remote",
+        "Site reliability engineer remote",
+        "Infrastructure engineer remote",
+        "Cloud engineer remote"
+      ]
+    }
   },
   "scheduling": {
     "scraper": {

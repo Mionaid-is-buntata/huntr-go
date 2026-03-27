@@ -137,9 +137,9 @@ func TestScoreJob(t *testing.T) {
 
 	ScoreJob(&job, prefs)
 
-	// Tech: 3 matches * 30 = 90
-	if job.ScoreBreakdown.TechStackScore != 90 {
-		t.Errorf("tech_stack_score = %d, want 90", job.ScoreBreakdown.TechStackScore)
+	// Tech: fallback role profile (3 matches * 10 = 30)
+	if job.ScoreBreakdown.TechStackScore != 30 {
+		t.Errorf("tech_stack_score = %d, want 30", job.ScoreBreakdown.TechStackScore)
 	}
 	// Domain: 0 matches
 	if job.ScoreBreakdown.DomainScore != 0 {
@@ -153,9 +153,46 @@ func TestScoreJob(t *testing.T) {
 	if !job.ScoreBreakdown.SalaryThreshold || job.ScoreBreakdown.SalaryScore != 15 {
 		t.Errorf("salary: threshold=%v score=%d", job.ScoreBreakdown.SalaryThreshold, job.ScoreBreakdown.SalaryScore)
 	}
-	// Total: 90 + 0 + 20 + 15 = 125
-	if job.Score != 125 {
-		t.Errorf("total score = %d, want 125", job.Score)
+	// Total: 30 + 0 + 20 + 15 = 65
+	if job.Score != 65 {
+		t.Errorf("total score = %d, want 65", job.Score)
+	}
+}
+
+func TestScoreJob_UsesWeightedRoleProfileCaps(t *testing.T) {
+	job := models.Job{
+		Title:  "Go Platform Engineer",
+		Skills: "Go Kubernetes Terraform AWS Python React TypeScript Security",
+	}
+	prefs := config.Preferences{
+		RoleProfile: config.RoleProfile{
+			PrimarySkills: config.SkillGroup{
+				Keywords: []string{"Go", "Platform", "Engineer"},
+				Weight:   20,
+				Cap:      2,
+			},
+			SecondarySkills: config.SkillGroup{
+				Keywords: []string{"Kubernetes", "Terraform", "AWS"},
+				Weight:   8,
+				Cap:      2,
+			},
+			AdjacentSkills: config.SkillGroup{
+				Keywords: []string{"Python", "React", "TypeScript", "Security"},
+				Weight:   3,
+				Cap:      2,
+			},
+		},
+	}
+
+	ScoreJob(&job, prefs)
+
+	// Primary: cap 2 => 40, Secondary: cap 2 => 16, Adjacent: cap 2 => 6
+	if job.ScoreBreakdown.PrimaryScore != 40 || job.ScoreBreakdown.SecondaryScore != 16 || job.ScoreBreakdown.AdjacentScore != 6 {
+		t.Fatalf("unexpected weighted scores: primary=%d secondary=%d adjacent=%d",
+			job.ScoreBreakdown.PrimaryScore, job.ScoreBreakdown.SecondaryScore, job.ScoreBreakdown.AdjacentScore)
+	}
+	if job.ScoreBreakdown.TechStackScore != 62 {
+		t.Fatalf("tech_stack_score = %d, want 62", job.ScoreBreakdown.TechStackScore)
 	}
 }
 

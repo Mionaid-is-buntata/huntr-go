@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -147,6 +148,80 @@ func processCV() bool {
 // lastProcessedFile tracks the last raw file we processed so we don't re-score it.
 var lastProcessedFile string
 
+func loadCVProfile(path string) *models.CVProfile {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var profile models.CVProfile
+	if err := json.Unmarshal(data, &profile); err != nil {
+		slog.Warn("failed to parse CV profile JSON", "path", path, "error", err)
+		return nil
+	}
+	return &profile
+}
+
+func enrichPreferencesWithCVProfile(prefs config.Preferences, profile *models.CVProfile) config.Preferences {
+	if profile == nil {
+		return prefs
+	}
+	role := prefs.EffectiveRoleProfile()
+	existing := make(map[string]struct{})
+	for _, kw := range role.PrimarySkills.Keywords {
+		existing[strings.ToLower(kw)] = struct{}{}
+	}
+	for _, kw := range role.SecondarySkills.Keywords {
+		existing[strings.ToLower(kw)] = struct{}{}
+	}
+	for _, kw := range role.AdjacentSkills.Keywords {
+		existing[strings.ToLower(kw)] = struct{}{}
+	}
+
+	// Soft enrichment only: add a small number of missing CV skills into adjacent bucket.
+	addedSkills := 0
+	for _, skill := range profile.Skills {
+		key := strings.ToLower(strings.TrimSpace(skill))
+		if key == "" {
+			continue
+		}
+		if _, ok := existing[key]; ok {
+			continue
+		}
+		role.AdjacentSkills.Keywords = append(role.AdjacentSkills.Keywords, skill)
+		existing[key] = struct{}{}
+		addedSkills++
+		if addedSkills >= 3 {
+			break
+		}
+	}
+
+	addedDomains := 0
+	for _, domain := range profile.Domains {
+		d := strings.TrimSpace(domain)
+		if d == "" {
+			continue
+		}
+		already := false
+		for _, current := range prefs.DomainKeywords {
+			if strings.EqualFold(current, d) {
+				already = true
+				break
+			}
+		}
+		if already {
+			continue
+		}
+		prefs.DomainKeywords = append(prefs.DomainKeywords, d)
+		addedDomains++
+		if addedDomains >= 2 {
+			break
+		}
+	}
+
+	prefs.RoleProfile = role
+	return prefs
+}
+
 func processJobs() int {
 	cfg, err := config.Load(configPath)
 	if err != nil {
@@ -222,9 +297,13 @@ func processJobs() int {
 	}
 	slog.Info("normalised jobs written", "file", normFile, "count", len(normalised))
 
+	prefs := cfg.Preferences
+	cvProfile := loadCVProfile(profileOut)
+	prefs = enrichPreferencesWithCVProfile(prefs, cvProfile)
+
 	// Score
 	slog.Info("step 2: scoring jobs")
-	scored := processor.ScoreJobs(normalised, cfg.Preferences)
+	scored := processor.ScoreJobs(normalised, prefs)
 
 	// Write scored
 	os.MkdirAll(scoredDir, 0755)

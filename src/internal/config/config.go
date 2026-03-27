@@ -35,6 +35,23 @@ type Preferences struct {
 	Locations         []string `json:"locations"`
 	MinSalary         int      `json:"min_salary"`
 	WorkType          []string `json:"work_type"`
+	RoleProfile       RoleProfile `json:"role_profile,omitempty"`
+}
+
+// SkillGroup configures weighted scoring for a set of related skills.
+type SkillGroup struct {
+	Keywords []string `json:"keywords"`
+	Weight   int      `json:"weight"`
+	Cap      int      `json:"cap"`
+}
+
+// RoleProfile controls broad, weighted skill matching and query expansion.
+type RoleProfile struct {
+	PrimarySkills   SkillGroup `json:"primary_skills"`
+	SecondarySkills SkillGroup `json:"secondary_skills"`
+	AdjacentSkills  SkillGroup `json:"adjacent_skills"`
+	ExcludedSkills  []string   `json:"excluded_skills,omitempty"`
+	QueryTerms      []string   `json:"query_terms,omitempty"`
 }
 
 // Scheduling holds scraper schedule configuration.
@@ -88,18 +105,44 @@ func Default() *Config {
 	return &Config{
 		JobSources: []Source{
 			{Name: "Reed", URL: "https://www.reed.co.uk/jobs/software-developer-jobs-in-london?remote=true", Enabled: true, Group: "general-job-boards"},
-			{Name: "Indeed", URL: "https://uk.indeed.com/jobs?q=Python+Developer+Remote&l=United+Kingdom", Enabled: true, Group: "general-job-boards"},
-			{Name: "Adzuna", URL: "https://www.adzuna.co.uk/jobs/search?q=python+developer+remote", Enabled: true, Group: "general-job-boards"},
-			{Name: "Technojobs", URL: "https://www.technojobs.co.uk/jobs/python", Enabled: true, Group: "tech-specialist-agencies"},
-			{Name: "CV-Library", URL: "https://www.cv-library.co.uk/jobs/python-developer/remote", Enabled: true, Group: "general-job-boards"},
-			{Name: "Totaljobs", URL: "https://www.totaljobs.com/jobs/python-developer/in-united-kingdom?remote=true", Enabled: true, Group: "general-job-boards"},
+			{Name: "Indeed", URL: "https://uk.indeed.com/jobs?q=Software+Engineer+Remote&l=United+Kingdom", Enabled: true, Group: "general-job-boards"},
+			{Name: "Adzuna", URL: "https://www.adzuna.co.uk/jobs/search?q=software+engineer+remote", Enabled: true, Group: "general-job-boards"},
+			{Name: "Technojobs", URL: "https://www.technojobs.co.uk/jobs/software-engineer", Enabled: true, Group: "tech-specialist-agencies"},
+			{Name: "CV-Library", URL: "https://www.cv-library.co.uk/jobs/software-engineer/remote", Enabled: true, Group: "general-job-boards"},
+			{Name: "Totaljobs", URL: "https://www.totaljobs.com/jobs/software-engineer/in-united-kingdom?remote=true", Enabled: true, Group: "general-job-boards"},
 		},
 		Preferences: Preferences{
-			TechStackKeywords: []string{"Python", "Full Stack", "Django", "Flask", "React", "APIs", "Microservices", "AWS", "Docker"},
+			TechStackKeywords: []string{"Go", "Platform", "Infrastructure", "DevOps", "Cloud", "Kubernetes", "Docker", "APIs", "Microservices"},
 			DomainKeywords:    []string{"FinTech", "E-commerce", "SaaS", "Transport", "Payments", "Healthcare"},
 			Locations:         []string{"Remote", "100% Remote", "Hybrid", "London", "Manchester", "UK", "Europe"},
 			MinSalary:         100000,
 			WorkType:          []string{"100% Remote", "Hybrid"},
+			RoleProfile: RoleProfile{
+				PrimarySkills: SkillGroup{
+					Keywords: []string{"Go", "Golang", "Platform Engineering", "Infrastructure", "DevOps"},
+					Weight:   18,
+					Cap:      3,
+				},
+				SecondarySkills: SkillGroup{
+					Keywords: []string{"Kubernetes", "Terraform", "AWS", "GCP", "CI/CD", "Observability", "SRE"},
+					Weight:   10,
+					Cap:      4,
+				},
+				AdjacentSkills: SkillGroup{
+					Keywords: []string{"Python", "React", "TypeScript", "Data Engineering", "Security"},
+					Weight:   4,
+					Cap:      4,
+				},
+				ExcludedSkills: []string{"Senior Python Developer", "Django-only"},
+				QueryTerms: []string{
+					"Go developer remote",
+					"Platform engineer remote",
+					"DevOps engineer remote",
+					"Site reliability engineer remote",
+					"Infrastructure engineer remote",
+					"Cloud engineer remote",
+				},
+			},
 		},
 		Scheduling: Scheduling{
 			Scraper: SchedulerConfig{
@@ -142,4 +185,52 @@ func Save(path string, cfg *Config) error {
 		return fmt.Errorf("config: write %s: %w", path, err)
 	}
 	return nil
+}
+
+// EffectiveRoleProfile returns a migration-safe role profile.
+// If role_profile is not configured, it is derived from tech_stack_keywords.
+func (p Preferences) EffectiveRoleProfile() RoleProfile {
+	if len(p.RoleProfile.PrimarySkills.Keywords) > 0 ||
+		len(p.RoleProfile.SecondarySkills.Keywords) > 0 ||
+		len(p.RoleProfile.AdjacentSkills.Keywords) > 0 ||
+		len(p.RoleProfile.QueryTerms) > 0 ||
+		len(p.RoleProfile.ExcludedSkills) > 0 {
+		rp := p.RoleProfile
+		if rp.PrimarySkills.Weight <= 0 {
+			rp.PrimarySkills.Weight = 12
+		}
+		if rp.SecondarySkills.Weight <= 0 {
+			rp.SecondarySkills.Weight = 7
+		}
+		if rp.AdjacentSkills.Weight <= 0 {
+			rp.AdjacentSkills.Weight = 3
+		}
+		if rp.PrimarySkills.Cap <= 0 {
+			rp.PrimarySkills.Cap = 3
+		}
+		if rp.SecondarySkills.Cap <= 0 {
+			rp.SecondarySkills.Cap = 4
+		}
+		if rp.AdjacentSkills.Cap <= 0 {
+			rp.AdjacentSkills.Cap = 4
+		}
+		return rp
+	}
+	return RoleProfile{
+		PrimarySkills: SkillGroup{
+			Keywords: p.TechStackKeywords,
+			Weight:   10,
+			Cap:      4,
+		},
+		SecondarySkills: SkillGroup{
+			Keywords: []string{},
+			Weight:   6,
+			Cap:      3,
+		},
+		AdjacentSkills: SkillGroup{
+			Keywords: []string{},
+			Weight:   3,
+			Cap:      3,
+		},
+	}
 }
