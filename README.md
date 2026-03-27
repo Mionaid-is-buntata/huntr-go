@@ -228,3 +228,4 @@ Detailed design documents are in the [docs/](docs/) directory:
 - [architecture.md](docs/architecture.md) - System architecture and design decisions
 - [requirements.md](docs/requirements.md) - Functional and non-functional requirements
 - [dependencies.md](docs/dependencies.md) - Python-to-Go dependency mapping
+- [git-divergent-branches.md](docs/git-divergent-branches.md) - How to reconcile divergent Git branches (merge vs rebase, pull defaults)
