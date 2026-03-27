@@ -48,6 +48,15 @@ func TestLoadPythonConfig(t *testing.T) {
 	if len(cfg.Preferences.WorkType) == 0 {
 		t.Error("expected work_type to be populated")
 	}
+	if len(cfg.Preferences.RoleProfile.PrimarySkills.Keywords) == 0 {
+		t.Error("expected role_profile.primary_skills.keywords to be populated")
+	}
+	if cfg.Preferences.RoleProfile.PrimarySkills.Weight <= 0 {
+		t.Error("expected role_profile.primary_skills.weight > 0")
+	}
+	if len(cfg.Preferences.RoleProfile.QueryTerms) == 0 {
+		t.Error("expected role_profile.query_terms to be populated")
+	}
 
 	// Verify scheduling
 	if cfg.Scheduling.Scraper.Frequency != "daily" {
@@ -94,6 +103,19 @@ func TestLoadPythonConfig(t *testing.T) {
 	// Verify threshold
 	if cfg.HighScoreThreshold != 70 {
 		t.Errorf("high_score_threshold = %d, want 70", cfg.HighScoreThreshold)
+	}
+}
+
+func TestEffectiveRoleProfileFallback(t *testing.T) {
+	prefs := Preferences{
+		TechStackKeywords: []string{"Go", "Kubernetes"},
+	}
+	rp := prefs.EffectiveRoleProfile()
+	if len(rp.PrimarySkills.Keywords) != 2 {
+		t.Fatalf("fallback primary skills = %d, want 2", len(rp.PrimarySkills.Keywords))
+	}
+	if rp.PrimarySkills.Weight <= 0 || rp.PrimarySkills.Cap <= 0 {
+		t.Fatalf("fallback primary defaults invalid: weight=%d cap=%d", rp.PrimarySkills.Weight, rp.PrimarySkills.Cap)
 	}
 }
 

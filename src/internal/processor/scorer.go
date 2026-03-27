@@ -10,7 +10,6 @@ import (
 )
 
 const (
-	TechStackWeight = 30
 	DomainWeight    = 25
 	LocationWeight  = 20
 	SalaryWeight    = 15
@@ -29,6 +28,29 @@ func matchKeywords(text string, keywords []string) int {
 		}
 	}
 	return count
+}
+
+func matchingKeywords(text string, keywords []string) []string {
+	if text == "" || len(keywords) == 0 {
+		return nil
+	}
+	lower := strings.ToLower(text)
+	seen := make(map[string]struct{}, len(keywords))
+	var matches []string
+	for _, kw := range keywords {
+		kwLower := strings.ToLower(strings.TrimSpace(kw))
+		if kwLower == "" {
+			continue
+		}
+		if _, exists := seen[kwLower]; exists {
+			continue
+		}
+		if strings.Contains(lower, kwLower) {
+			seen[kwLower] = struct{}{}
+			matches = append(matches, kwLower)
+		}
+	}
+	return matches
 }
 
 // matchLocation checks if job location matches any preferred location.
@@ -50,13 +72,39 @@ func ScoreJob(job *models.Job, prefs config.Preferences) {
 	score := 0
 	bd := &models.ScoreBreakdown{}
 
-	// Tech stack: 30 pts per match
-	techText := job.Title + " " + job.Skills
-	techMatches := matchKeywords(techText, prefs.TechStackKeywords)
-	techScore := techMatches * TechStackWeight
+	techText := job.Title + " " + job.Skills + " " + job.Responsibilities + " " + job.Description
+	roleProfile := prefs.EffectiveRoleProfile()
+
+	primaryMatches := matchingKeywords(techText, roleProfile.PrimarySkills.Keywords)
+	secondaryMatches := matchingKeywords(techText, roleProfile.SecondarySkills.Keywords)
+	adjacentMatches := matchingKeywords(techText, roleProfile.AdjacentSkills.Keywords)
+
+	primaryCount := min(len(primaryMatches), roleProfile.PrimarySkills.Cap)
+	secondaryCount := min(len(secondaryMatches), roleProfile.SecondarySkills.Cap)
+	adjacentCount := min(len(adjacentMatches), roleProfile.AdjacentSkills.Cap)
+
+	primaryScore := primaryCount * roleProfile.PrimarySkills.Weight
+	secondaryScore := secondaryCount * roleProfile.SecondarySkills.Weight
+	adjacentScore := adjacentCount * roleProfile.AdjacentSkills.Weight
+	techScore := primaryScore + secondaryScore + adjacentScore
+
+	excludedCount := matchKeywords(techText, roleProfile.ExcludedSkills)
+	excludedPenalty := excludedCount * 5
+	if excludedPenalty > techScore/2 {
+		excludedPenalty = techScore / 2
+	}
+	techScore -= excludedPenalty
 	score += techScore
-	bd.TechStackMatches = techMatches
+
+	bd.TechStackMatches = primaryCount + secondaryCount + adjacentCount
 	bd.TechStackScore = techScore
+	bd.PrimaryMatches = primaryCount
+	bd.PrimaryScore = primaryScore
+	bd.SecondaryMatches = secondaryCount
+	bd.SecondaryScore = secondaryScore
+	bd.AdjacentMatches = adjacentCount
+	bd.AdjacentScore = adjacentScore
+	bd.ExcludedPenalty = excludedPenalty
 
 	// Domain: 25 pts per match
 	domainText := job.Title + " " + job.Skills + " " + job.Responsibilities
