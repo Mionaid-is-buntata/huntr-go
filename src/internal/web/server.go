@@ -567,12 +567,13 @@ func (s *Server) handleSourcesTest(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 400, map[string]string{"error": "URL required"})
 		return
 	}
-	// Simple static test — full rod-based dynamic testing will come in Phase 3
-	valid := ValidateSourceURL(data.URL)
+	ok, statusCode, msg := ValidateSourceURLDetail(data.URL)
 	writeJSON(w, 200, map[string]interface{}{
-		"success":          valid,
-		"message":          map[bool]string{true: "Source accessible", false: "Source not accessible"}[valid],
+		"success":          ok,
+		"message":          msg,
+		"status_code":      statusCode,
 		"recommended_type": "static",
+		"note":             "Reachability check only (HTTP 200); does not run the site parser or update Error History.",
 	})
 }
 
