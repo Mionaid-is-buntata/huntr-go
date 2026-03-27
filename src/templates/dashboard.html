@@ -2546,9 +2546,9 @@
                     <span class="source-item-name">${source.name}${activityHtml}</span>
                     <div class="source-item-actions">
                       <span class="source-item-status ${parserStatus}">${parserLabel}</span>
-                      <button class="btn btn-secondary btn-small" style="padding: 3px 8px; font-size: 0.75em;"
+                      <button type="button" class="btn btn-secondary btn-small" style="padding: 3px 8px; font-size: 0.75em;"
                               onclick="assessSourceParserFromRow(this)"
-                              title="Test parser - see Status > Error History for errors">Assess</button>
+                              title="Check URL reachability (HTTP 200). Does not run the scraper parser.">Assess</button>
                     </div>
                     <button class="source-item-delete"
                             onclick="removeSource('${safeName}')"
@@ -2770,15 +2770,16 @@
 
       async function assessSourceParser(name, url, dynamic, btnElement) {
         const testResultsDiv = document.getElementById("sources-test-results") || document.getElementById("test-results");
-        const origHtml = testResultsDiv ? testResultsDiv.innerHTML : '';
         if (testResultsDiv) {
           testResultsDiv.innerHTML = `
             <div class="message" style="display: flex; align-items: center;">
               <span class="loading"></span>
-              <span style="margin-left: 10px;">Testing parser for ${name}...</span>
+              <span style="margin-left: 10px;">Checking URL for ${name}...</span>
             </div>
           `;
+          testResultsDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
+        showMessage("source-message", `Checking URL reachability for ${name}…`, "success");
         if (btnElement) {
           btnElement.disabled = true;
         }
@@ -2789,25 +2790,32 @@
             body: JSON.stringify({ url: url, dynamic: dynamic })
           });
           const data = await response.json();
+          const noteHtml = data.note ? `<br><small>${data.note}</small>` : "";
           if (testResultsDiv) {
             if (response.ok && data.success) {
               testResultsDiv.innerHTML = `
                 <div class="message message-success">
-                  <strong>Parser OK for ${name}</strong><br>
-                  ${data.message || "Source is accessible."}
-                  ${data.jobs_found ? `<br><small>Found ${data.jobs_found} job listings.</small>` : ""}
-                  <br><small>See Status &gt; Error History for any parser errors.</small>
+                  <strong>URL check OK for ${name}</strong><br>
+                  ${data.message || "HTTP 200 OK"}
+                  ${noteHtml}
+                  <br><small>Scraper/parser errors appear in Status → Error History.</small>
                 </div>
               `;
+              showMessage("source-message", `URL check OK for ${name}`, "success");
             } else {
               testResultsDiv.innerHTML = `
                 <div class="message message-error">
-                  <strong>Parser issue for ${name}</strong><br>
-                  ${data.message || data.error || "Source could not be accessed."}
-                  <br><small>See Status &gt; Error History for details.</small>
+                  <strong>URL check failed for ${name}</strong><br>
+                  ${data.message || data.error || "Could not get HTTP 200 from this URL."}
+                  ${noteHtml}
+                  <br><small>Scraper/parser errors appear in Status → Error History.</small>
                 </div>
               `;
+              showMessage("source-message", `URL check failed for ${name}`, "error");
             }
+          }
+          if (testResultsDiv) {
+            testResultsDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
           }
         } catch (e) {
           if (testResultsDiv) {
@@ -2816,6 +2824,10 @@
                 <strong>Test failed for ${name}</strong><br>${e.message}
               </div>
             `;
+          }
+          showMessage("source-message", `URL check error: ${e.message}`, "error");
+          if (testResultsDiv) {
+            testResultsDiv.scrollIntoView({ behavior: "smooth", block: "nearest" });
           }
         } finally {
           if (btnElement) {

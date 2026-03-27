@@ -124,20 +124,30 @@ func AddSource(cfg *config.Config, name, url string, dynamic bool, group string,
 	return AddSourceResult{Success: true, Message: fmt.Sprintf("Source %q added successfully", name), Source: &newSource}
 }
 
-// ValidateSourceURL checks if a URL is accessible.
-func ValidateSourceURL(url string) bool {
+// ValidateSourceURLDetail performs a GET request and reports whether the response was HTTP 200.
+func ValidateSourceURLDetail(rawURL string) (ok bool, statusCode int, message string) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", rawURL, nil)
 	if err != nil {
-		slog.Warn("URL validation failed", "url", url, "error", err)
-		return false
+		slog.Warn("URL validation failed", "url", rawURL, "error", err)
+		return false, 0, fmt.Sprintf("invalid URL: %v", err)
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux armv7l) AppleWebKit/537.36")
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.Warn("URL validation failed", "url", url, "error", err)
-		return false
+		slog.Warn("URL validation failed", "url", rawURL, "error", err)
+		return false, 0, fmt.Sprintf("request failed: %v", err)
 	}
-	resp.Body.Close()
-	return resp.StatusCode == 200
+	defer resp.Body.Close()
+	statusCode = resp.StatusCode
+	if statusCode == 200 {
+		return true, statusCode, "HTTP 200 OK"
+	}
+	return false, statusCode, fmt.Sprintf("HTTP %d (expected 200)", statusCode)
+}
+
+// ValidateSourceURL checks if a URL is accessible (GET returns HTTP 200).
+func ValidateSourceURL(url string) bool {
+	ok, _, _ := ValidateSourceURLDetail(url)
+	return ok
 }
