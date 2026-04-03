@@ -23,6 +23,7 @@ type VectorDB struct {
 }
 
 // NewVectorDB creates or opens a persistent chromem-go database.
+// If the database is corrupted, it removes and recreates it automatically.
 func NewVectorDB(path string) (*VectorDB, error) {
 	if path == "" {
 		path = vectorDBPath
@@ -33,7 +34,18 @@ func NewVectorDB(path string) (*VectorDB, error) {
 
 	db, err := chromem.NewPersistentDB(path, false)
 	if err != nil {
-		return nil, fmt.Errorf("vector_db: open: %w", err)
+		slog.Warn("vector DB open failed, removing corrupted data and recreating", "path", path, "error", err)
+		if removeErr := os.RemoveAll(path); removeErr != nil {
+			return nil, fmt.Errorf("vector_db: open: %w (recovery failed: %v)", err, removeErr)
+		}
+		if mkdirErr := os.MkdirAll(path, 0755); mkdirErr != nil {
+			return nil, fmt.Errorf("vector_db: mkdir after recovery: %w", mkdirErr)
+		}
+		db, err = chromem.NewPersistentDB(path, false)
+		if err != nil {
+			return nil, fmt.Errorf("vector_db: open after recovery: %w", err)
+		}
+		slog.Info("vector DB recovered successfully", "path", path)
 	}
 	return &VectorDB{db: db, path: path}, nil
 }

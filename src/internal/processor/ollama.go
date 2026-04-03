@@ -24,7 +24,7 @@ const (
 // OllamaClient holds the selected models and host configuration.
 type OllamaClient struct {
 	Model          string // LLM model for /api/generate
-	EmbeddingModel string // Embedding model for /api/embeddings
+	EmbeddingModel string // Embedding model for /api/embed
 	Host           string
 	Reason         string
 }
@@ -134,9 +134,9 @@ func SelectModel(llmOverride, embeddingOverride string) (*OllamaClient, error) {
 }
 
 // GenerateEmbeddings calls the Ollama API to generate embeddings for text chunks.
-// Uses the client's EmbeddingModel for the /api/embeddings endpoint.
+// Uses the client's EmbeddingModel for the /api/embed endpoint.
 func GenerateEmbeddings(chunks []CVChunkWithEmbedding, ollamaClient *OllamaClient) error {
-	url := fmt.Sprintf("http://%s/api/embeddings", ollamaClient.Host)
+	url := fmt.Sprintf("http://%s/api/embed", ollamaClient.Host)
 	httpClient := &http.Client{Timeout: 60 * time.Second}
 
 	slog.Info("generating embeddings", "chunks", len(chunks), "model", ollamaClient.EmbeddingModel)
@@ -144,8 +144,8 @@ func GenerateEmbeddings(chunks []CVChunkWithEmbedding, ollamaClient *OllamaClien
 	for i := range chunks {
 		if err := func() error {
 			body, _ := json.Marshal(map[string]string{
-				"model":  ollamaClient.EmbeddingModel,
-				"prompt": chunks[i].Text,
+				"model": ollamaClient.EmbeddingModel,
+				"input": chunks[i].Text,
 			})
 
 			resp, err := httpClient.Post(url, "application/json", bytes.NewReader(body))
@@ -154,14 +154,21 @@ func GenerateEmbeddings(chunks []CVChunkWithEmbedding, ollamaClient *OllamaClien
 			}
 			defer resp.Body.Close()
 
+			if resp.StatusCode != http.StatusOK {
+				return fmt.Errorf("embedding request %d: unexpected status %s", i, resp.Status)
+			}
+
 			var result struct {
-				Embedding []float32 `json:"embedding"`
+				Embeddings [][]float32 `json:"embeddings"`
 			}
 			if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 				return fmt.Errorf("embedding decode %d: %w", i, err)
 			}
+			if len(result.Embeddings) == 0 {
+				return fmt.Errorf("embedding %d: empty response", i)
+			}
 
-			chunks[i].Embedding = result.Embedding
+			chunks[i].Embedding = result.Embeddings[0]
 			return nil
 		}(); err != nil {
 			return err
